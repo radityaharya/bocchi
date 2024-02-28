@@ -1,5 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import helmet from 'helmet';
 import { Client } from '@biscxit/discord-module-loader';
 import { GatewayIntentBits } from 'discord.js';
 import config from '@/config';
@@ -11,11 +12,10 @@ import { registerRoutes } from '@/webhooks';
 import WebhookRoutes from './models/webhookRoutes';
 
 const isDev = process.argv.some((arg) => arg.includes('ts-node'));
-
 const app: express.Application = express();
-
 const port: number = parseInt(process.env.PORT || '3000');
 
+app.use(helmet());
 app.use(bodyParser.json());
 
 const client = new Client({

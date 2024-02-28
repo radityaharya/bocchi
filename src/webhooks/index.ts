@@ -149,6 +149,17 @@ export async function registerRoutes(client: Client) {
 
   await Promise.all(routePromises);
 
+  router.all('*', (req, res) => {
+    const matchedRoute = router.stack.find(
+      (route) => route.route.path === req.path
+    );
+    if (matchedRoute && !matchedRoute.route.methods[req.method.toLowerCase()]) {
+      res.status(405).send('Method Not Allowed');
+    } else {
+      res.status(404).send('Not Found');
+    }
+  });
+
   const groupedRoutes = routes.reduce((acc, route) => {
     if (!acc[route.path]) {
       acc[route.path] = {};
