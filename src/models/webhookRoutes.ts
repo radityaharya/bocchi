@@ -4,7 +4,7 @@ import sequelize from '@/lib/sequelize';
 
 class WebhookRoutes extends Model {
   declare id: string;
-  declare protected: boolean;
+  declare isProtected: boolean;
   declare secret: string;
 }
 
