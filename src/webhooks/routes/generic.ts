@@ -1,6 +1,11 @@
 import type { Request, Response } from 'express';
 import { Client } from '@biscxit/discord-module-loader';
 import { Colors, EmbedBuilder, TextChannel } from 'discord.js';
+import { file as tmpFile } from 'tmp-promise';
+import fs from 'fs';
+import util from 'util';
+
+const writeFile = util.promisify(fs.writeFile);
 
 export const path = '/generic';
 export const isProtected = true;
@@ -8,24 +13,8 @@ export const isProtected = true;
 export function post(client: Client) {
   return async function (req: Request, res: Response) {
     try {
-      const embed = new EmbedBuilder()
-        .setTitle('Webhook Data')
-        .setColor(Colors.Purple)
-        .setDescription('Here are the details of the webhook data:')
-        .setTimestamp()
-        .setFooter({ text: 'Webhook' });
-
-      embed.addFields({
-        name: 'Raw Body',
-        value: '```json\n' + JSON.stringify(req.body, null, 2) + '\n```',
-      });
-
-      embed.addFields({
-        name: 'Headers',
-        value: '```json\n' + JSON.stringify(req.headers, null, 2) + '\n```',
-      });
-
       const channelId = req.query.channelId as string | undefined;
+
       if (!channelId) {
         res.status(400).send('Missing channelId');
         return;
@@ -37,7 +26,32 @@ export function post(client: Client) {
         return;
       }
 
-      channel.send({ embeds: [embed] });
+      const tmp = await tmpFile({ postfix: '.json' });
+
+      const data = JSON.stringify(
+        {
+          body: req.body,
+          headers: req.headers,
+        },
+        null,
+        2
+      );
+      await writeFile(tmp.path, data);
+
+      await channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle('Generic Webhook Received')
+            .setColor(Colors.Green)
+            .setDescription('Here is the request body and headers')
+            .setTimestamp()
+            .setFooter({ text: 'Generic Webhook' }),
+        ],
+        files: [tmp.path],
+      });
+
+      await tmp.cleanup();
+
       res.send('OK');
     } catch (error) {
       console.error(error);
