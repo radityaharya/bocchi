@@ -17,40 +17,47 @@ export default new Command({
     .setDescription('List all webhooks'),
   execute: async (interaction: ChatInputCommandInteraction) => {
     try {
-      const embed = new EmbedBuilder()
-        .setColor(Colors.Blue)
-        .setTitle('🌐 Webhooks')
-        .setDescription('Here are all the registered webhooks:')
-        .setTimestamp()
-        .setFooter({
-          text: 'Webhooks',
-        });
-
       const webhooks = await WebhookRoutes.findAll();
+      const embeds = [];
 
-      webhooks.forEach((webhook, index) => {
+      for (const [index, webhook] of webhooks.entries()) {
         let webhookUrl = `${BASE_URL}/webhooks${webhook.id}?channelId=${interaction.channelId}`;
         if (webhook.isProtected) {
           webhookUrl += `&secret=${webhook.secret}`;
         }
-        embed.addFields(
-          {
-            name: `🔗 Webhook #${index + 1}`,
-            value: `**Path:** \`${webhook.id}\`\n**Secret:** ${
-              webhook.secret
-            }\n**Is Protected:** ${
-              webhook.isProtected ? 'Yes' : 'No'
-            }\n**URL:** ${webhookUrl}`,
-          },
-          {
-            name: '\u200B',
-            value: '\u200B',
-          }
-        );
-      });
+
+        const embed = new EmbedBuilder()
+          .setColor(Colors.Blue)
+          .setTitle(`🌐 Webhook #${index + 1}`)
+          .setDescription('Here are the details of the webhook:')
+          .addFields(
+            {
+              name: 'Path',
+              value: `\`${webhook.id}\``,
+            },
+            {
+              name: 'Secret',
+              value: webhook.secret,
+            },
+            {
+              name: 'Is Protected',
+              value: webhook.isProtected ? 'Yes' : 'No',
+            },
+            {
+              name: 'URL',
+              value: webhookUrl,
+            }
+          )
+          .setTimestamp()
+          .setFooter({
+            text: 'Webhooks',
+          });
+
+        embeds.push(embed);
+      }
 
       await interaction.reply({
-        embeds: [embed],
+        embeds: embeds,
         fetchReply: true,
       });
     } catch (error) {
