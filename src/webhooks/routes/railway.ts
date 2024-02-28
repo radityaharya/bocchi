@@ -6,8 +6,16 @@ export const isProtected = true;
 export function post(client: Client) {
   return async function (req: Request, res: Response) {
     try {
-      const { type, timestamp, project, environment, deployment, meta } =
-        req.body;
+      const {
+        type,
+        timestamp,
+        project,
+        environment,
+        deployment,
+        meta,
+        service,
+        status,
+      } = req.body;
 
       if (
         typeof type !== 'string' ||
@@ -19,19 +27,42 @@ export function post(client: Client) {
         res.status(400).send('Invalid request body');
         return;
       }
-
       const embed = new EmbedBuilder()
         .setTitle('Railway Status')
         .setColor(Colors.Purple)
-        .setDescription(
-          `A status of ${type} has been made to the ${project.name} project`
-        )
-        .addFields({ name: 'Environment', value: environment.name })
-        .addFields({ name: 'Deployed By', value: deployment.creator.name })
+        .setTimestamp()
+        .setFooter({ text: 'Railway' })
+        .setAuthor({
+          name: deployment.creator.name,
+          iconURL: deployment.creator.avatar,
+        })
         .setThumbnail(deployment.creator.avatar)
-        .setTimestamp(new Date(timestamp))
-        .setFooter({ text: 'Railway' });
-
+        .addFields(
+          {
+            name: 'Type',
+            value: type,
+          },
+          {
+            name: 'Project',
+            value: `Name: ${project.name}\nID: ${project.id}`,
+          },
+          {
+            name: 'Environment',
+            value: `Name: ${environment.name}\nID: ${environment.id}`,
+          },
+          {
+            name: 'Deployment',
+            value: `ID: ${deployment.id}\nRegion: ${deployment.meta.serviceManifest.deploy.region}`,
+          },
+          {
+            name: 'Service',
+            value: `Name: ${service.name}\nID: ${service.id}`,
+          },
+          {
+            name: 'Status',
+            value: status,
+          }
+        );
       const channelId = req.query.channelId as string | undefined;
       if (!channelId) {
         res.status(400).send('Missing channelId');
