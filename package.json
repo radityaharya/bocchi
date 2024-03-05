@@ -31,9 +31,8 @@
     "gpt3-tokenizer": "^1.1.5",
     "helmet": "^7.1.0",
     "lodash": "^4.17.21",
-    "mariadb": "^3.2.3",
-    "mysql2": "^3.2.0",
     "openai": "^4.28.0",
+    "pg": "^8.11.3",
     "rate-limiter-flexible": "^2.4.1",
     "sequelize": "^6.30.0",
     "tmp-promise": "^3.0.3"

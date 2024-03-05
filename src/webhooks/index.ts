@@ -91,10 +91,10 @@ export async function registerRoutes(client: Client) {
   const currentRoutes = importedRoutes.flat();
 
   const deletedRoutes = dbRoutes.filter((dbRoute) => {
-    return !currentRoutes.some((route) => route.path === dbRoute.id);
+    return !currentRoutes.some((route) => route.path === dbRoute.path);
   });
   const deletePromises = deletedRoutes.map((route) => {
-    console.log('Deleting route:', route.id);
+    console.log('Deleting route:', route.path);
     return route.destroy();
   });
   await Promise.all(deletePromises);
@@ -127,7 +127,7 @@ export async function registerRoutes(client: Client) {
 
     // Sync route to the database
     const [webhookRoute, created] = await WebhookRoutes.findOrCreate({
-      where: { id: routePath },
+      where: { path: routePath },
       defaults: {
         isProtected,
         secret: secret || crypto.randomBytes(5).toString('hex'),
