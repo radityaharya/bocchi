@@ -22,6 +22,7 @@ const config = {
   discord: {
     client_id: process.env.DISCORD_CLIENT_ID,
     token: process.env.DISCORD_TOKEN,
+    rss_channel_id: process.env.DISCORD_RSS_CHANNEL_ID as string,
   },
   openai: {
     api_key: process.env.OPENAI_API_KEY,

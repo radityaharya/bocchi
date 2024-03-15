@@ -4,6 +4,7 @@ import { Client, Events } from 'discord.js';
 
 import config from '@/config';
 import pruneThreads from '@/jobs/prune-threads';
+import rssPooler from '@/jobs/rss-pooler';
 import { isApiError } from '@/lib/helpers';
 
 export default new Event({
@@ -24,6 +25,7 @@ export default new Event({
 
     const job = Cron('* * * * *', async () => {
       await pruneThreads(client);
+      await rssPooler(client);
     });
 
     console.log(`\nLogged in as ${client.user.tag}!`);

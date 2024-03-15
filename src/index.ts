@@ -10,6 +10,7 @@ import Config from '@/models/config';
 
 import { registerRoutes } from '@/webhooks';
 import WebhookRoutes from './models/webhookRoutes';
+import RssPooler from './models/rss';
 
 const isDev = process.argv.some((arg) => arg.includes('ts-node'));
 const app: express.Application = express();
@@ -37,6 +38,7 @@ sequelize
   .then(async () => {
     await Conversation.sync();
     await WebhookRoutes.sync();
+    await RssPooler.sync();
 
     await client.initialize(config.discord.token as string);
     const router = await registerRoutes(client);
