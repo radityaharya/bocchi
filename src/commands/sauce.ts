@@ -41,11 +41,42 @@ type TraceMoeResult = {
  * @throws An error if the image fails to download.
  */
 async function downloadImage(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Failed to download image');
-  const buffer = await response.buffer();
+  console.log('🚀 ~ downloadImage ~ url:', url);
+  let response;
+  try {
+    response = await fetch(url);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    throw new Error(
+      `Failed to fetch the image at url: ${url}. Error: ${error.message}`
+    );
+  }
+
+  if (!response.ok)
+    throw new Error(
+      `Failed to download image. Status: ${response.status} StatusText: ${response.statusText}`
+    );
+
+  let buffer;
+  try {
+    buffer = await response.buffer();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    throw new Error(
+      `Failed to read the response into buffer. Error: ${error.message}`
+    );
+  }
+
   const tempFilePath = path.join(os.tmpdir(), 'tempImage.jpg');
-  fs.writeFileSync(tempFilePath, buffer);
+  try {
+    fs.writeFileSync(tempFilePath, buffer);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    throw new Error(
+      `Failed to write the image to file at path: ${tempFilePath}. Error: ${error.message}`
+    );
+  }
+
   return tempFilePath;
 }
 
@@ -56,6 +87,7 @@ async function downloadImage(url: string): Promise<string> {
  * @throws An error if failed to get anime sauce.
  */
 async function getAnimeSauce(tempFilePath: string): Promise<TraceMoeResult> {
+  console.log('🚀 ~ getAnimeSauce ~ tempFilePath:', tempFilePath);
   const formData = new FormData();
   formData.append('image', fs.createReadStream(tempFilePath));
   const traceResponse = await fetch('https://api.trace.moe/search?cutBorders', {
@@ -82,6 +114,7 @@ async function getAnimeSauce(tempFilePath: string): Promise<TraceMoeResult> {
  * @throws An error if failed to get anime details.
  */
 async function getAnimeDetails(anilistId: number) {
+  console.log('🚀 ~ getAnimeDetails ~ getAnimeDetails:', anilistId);
   const anilistResponse = await fetch(`https://graphql.anilist.co`, {
     method: 'POST',
     headers: {
