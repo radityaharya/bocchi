@@ -42,6 +42,10 @@ sequelize
     const router = await registerRoutes(client);
     app.use('/webhooks', router);
 
+    app.get('/health', (req, res) => {
+      res.send('OK');
+    });
+
     app.listen(port, () => {
       console.log(`App listening at http://localhost:${port}`);
     });
