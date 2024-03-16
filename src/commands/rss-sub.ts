@@ -3,13 +3,13 @@ import RssPooler from '@/models/rss';
 import { Command } from '@biscxit/discord-module-loader';
 import { ChatInputCommandInteraction } from 'discord.js';
 import Parser from 'rss-parser';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 const parser = new Parser();
 
 async function fetchRss(url: string): Promise<any> {
-  const response = await fetch(url);
-  return await parser.parseString(await response.text());
+  const response = await axios.get(url);
+  return await parser.parseString(response.data);
 }
 
 export default new Command({
@@ -20,7 +20,7 @@ export default new Command({
       option
         .setName('url')
         .setDescription('The URL of the RSS feed')
-        .setRequired(true)
+        .setRequired(true),
     ),
   execute: async (interaction: ChatInputCommandInteraction) => {
     const url = interaction.options.getString('url');
@@ -56,7 +56,7 @@ export default new Command({
     } catch (err) {
       console.error(`Failed to subscribe to ${url}:`, err);
       await interaction.reply(
-        `Failed to subscribe to ${url}. Please make sure it's a valid RSS feed.`
+        `Failed to subscribe to ${url}. Please make sure it's a valid RSS feed.`,
       );
     }
   },

@@ -22,6 +22,7 @@
     "@biscxit/discord-module-loader": "^0.5.0",
     "@types/body-parser": "^1.19.5",
     "@types/express": "^4.17.21",
+    "axios": "^1.6.8",
     "body-parser": "^1.20.2",
     "croner": "^8.0.1",
     "date-fns": "^3.5.0",
@@ -40,7 +41,6 @@
     "tmp-promise": "^3.0.3"
   },
   "devDependencies": {
-    "@types/axios": "^0.14.0",
     "@types/express-serve-static-core": "^4.17.43",
     "@types/lodash": "^4.17.0",
     "@types/node": "^20.11.28",

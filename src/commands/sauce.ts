@@ -6,7 +6,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 import { createErrorEmbed } from '@/lib/embeds';
-import fetch from 'node-fetch';
+import axios, { AxiosError } from 'axios';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -34,115 +34,90 @@ type TraceMoeResult = {
   };
 };
 
-/**
- * Downloads an image from the specified URL and saves it to a temporary file.
- * @param url - The URL of the image to download.
- * @returns A promise that resolves to the path of the downloaded image file.
- * @throws An error if the image fails to download.
- */
 async function downloadImage(url: string): Promise<string> {
   console.log('🚀 ~ downloadImage ~ url:', url);
   let response;
   try {
-    response = await fetch(url);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response = await axios.get(url, { responseType: 'arraybuffer' });
   } catch (error: any) {
-    throw new Error(
-      `Failed to fetch the image at url: ${url}. Error: ${error.message}`
-    );
+    if (axios.isAxiosError(error)) {
+      throw new Error(
+        `Failed to fetch the image at url: ${url}. Error: ${error.message}`,
+      );
+    }
+    throw error;
   }
 
-  if (!response.ok)
-    throw new Error(
-      `Failed to download image. Status: ${response.status} StatusText: ${response.statusText}`
-    );
-
-  let buffer;
-  try {
-    buffer = await response.buffer();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    throw new Error(
-      `Failed to read the response into buffer. Error: ${error.message}`
-    );
-  }
+  const buffer = response.data;
 
   const tempFilePath = path.join(os.tmpdir(), 'tempImage.jpg');
   try {
     fs.writeFileSync(tempFilePath, buffer);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     throw new Error(
-      `Failed to write the image to file at path: ${tempFilePath}. Error: ${error.message}`
+      `Failed to write the image to file at path: ${tempFilePath}. Error: ${error.message}`,
     );
   }
 
   return tempFilePath;
 }
 
-/**
- * Retrieves anime sauce using the provided image file path.
- * @param tempFilePath - The file path of the image.
- * @returns A Promise that resolves to the TraceMoeResult object containing the anime sauce information.
- * @throws An error if failed to get anime sauce.
- */
 async function getAnimeSauce(tempFilePath: string): Promise<TraceMoeResult> {
   console.log('🚀 ~ getAnimeSauce ~ tempFilePath:', tempFilePath);
   const formData = new FormData();
   formData.append('image', fs.createReadStream(tempFilePath));
-  const traceResponse = await fetch('https://api.trace.moe/search?cutBorders', {
-    method: 'POST',
-    body: formData,
-    headers: formData.getHeaders(),
-  });
-  if (!traceResponse.ok) throw new Error('Failed to get anime sauce');
+  const traceResponse = await axios.post(
+    'https://api.trace.moe/search?cutBorders',
+    formData,
+    {
+      headers: formData.getHeaders(),
+    },
+  );
+  if (traceResponse.status !== 200)
+    throw new Error('Failed to get anime sauce');
   return {
-    ...(await traceResponse.json()),
+    ...traceResponse.data,
     limit: {
-      limit: Number(traceResponse.headers.get('x-ratelimit-limit')),
-      remaining: Number(traceResponse.headers.get('x-ratelimit-remaining')),
-      reset: Number(traceResponse.headers.get('x-ratelimit-reset')),
+      limit: Number(traceResponse.headers['x-ratelimit-limit']),
+      remaining: Number(traceResponse.headers['x-ratelimit-remaining']),
+      reset: Number(traceResponse.headers['x-ratelimit-reset']),
     },
   };
 }
 
-// Function to get anime details from Anilist
-/**
- * Fetches details of an anime from AniList API.
- * @param anilistId - The AniList ID of the anime.
- * @returns A Promise that resolves to the JSON response containing the anime details.
- * @throws An error if failed to get anime details.
- */
 async function getAnimeDetails(anilistId: number) {
   console.log('🚀 ~ getAnimeDetails ~ getAnimeDetails:', anilistId);
-  const anilistResponse = await fetch(`https://graphql.anilist.co`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  const anilistResponse = await axios.post(
+    `https://graphql.anilist.co`,
+    {
       query: `
-        query ($id: Int) {
-          Media(id: $id, type: ANIME) {
-            title {
-              romaji
-              english
-              native
-            }
-            siteUrl
-            episodes
-            genres
-            averageScore
+      query ($id: Int) {
+        Media(id: $id, type: ANIME) {
+          title {
+            romaji
+            english
+            native
           }
+          siteUrl
+          episodes
+          genres
+          averageScore
         }
-      `,
+      }
+    `,
       variables: {
         id: anilistId,
       },
-    }),
-  });
-  if (!anilistResponse.ok) throw new Error('Failed to get anime details');
-  return await anilistResponse.json();
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+  if (anilistResponse.status !== 200)
+    throw new Error('Failed to get anime details');
+  return anilistResponse.data;
 }
 
 export default new Command({
@@ -153,7 +128,7 @@ export default new Command({
       option
         .setName('image')
         .setDescription('Image to search for')
-        .setRequired(true)
+        .setRequired(true),
     ),
   rateLimiter: {
     points: 5,
@@ -191,7 +166,7 @@ export default new Command({
           }
           return prev;
         },
-        null
+        null,
       );
       if (!match) {
         await interaction.editReply({
@@ -239,7 +214,7 @@ export default new Command({
           {
             name: 'Average Score',
             value: anime.score.toString(),
-          }
+          },
         )
         .setImage(match.image)
         .setTimestamp()
