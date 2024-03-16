@@ -126,6 +126,34 @@ export function buildThreadContext(
   return buildContext(context, userMessage, behavior);
 }
 
+export function buildDirectMessageContext(
+  messages: Collection<string, Message>,
+  userMessage: string,
+  botId: string
+): Array<OpenAI.Chat.ChatCompletionMessageParam> {
+  if (messages.size === 0) {
+    return buildContext([], userMessage);
+  }
+
+  const context = messages
+    .filter(
+      (message) =>
+        message.type === MessageType.Default &&
+        message.content &&
+        message.embeds.length === 0 &&
+        (message.mentions.members?.size ?? 0) === 0
+    )
+    .map((message) => {
+      return {
+        role: message.author.id === botId ? 'assistant' : 'user',
+        content: message.content,
+      };
+    })
+    .reverse();
+
+  return buildContext(context, userMessage);
+}
+
 export async function detachComponents(
   messages: Collection<string, Message>,
   botId: string

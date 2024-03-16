@@ -17,6 +17,7 @@ import config from '@/config';
 import { createActionRow, createRegenerateButton } from '@/lib/buttons';
 import {
   buildContext,
+  buildDirectMessageContext,
   buildThreadContext,
   detachComponents,
   getThreadPrefix,
@@ -119,11 +120,22 @@ async function handleDirectMessage(
 
     const messages = await channel.messages.fetch({ before: message.id });
 
+    // TODO: temp
+    if (message.content === '!prune') {
+      await Promise.all(
+        messages.map((message) => {
+          if (message.author.id === client.user.id) {
+            return message.delete();
+          }
+        })
+      );
+      return;
+    }
+
     await channel.sendTyping();
 
-    // TODO: Retain previous messages with constraints (e.g. 10 messages max).
     const completion = await createChatCompletion(
-      buildContext([], message.content)
+      buildDirectMessageContext(messages, message.content, client.user.id)
     );
 
     if (completion.status !== CompletionStatus.Ok) {

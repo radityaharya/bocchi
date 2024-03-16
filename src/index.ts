@@ -2,7 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import helmet from 'helmet';
 import { Client } from '@biscxit/discord-module-loader';
-import { GatewayIntentBits } from 'discord.js';
+import { GatewayIntentBits, Partials } from 'discord.js';
 import config from '@/config';
 import sequelize from '@/lib/sequelize';
 import Conversation from '@/models/conversation';
@@ -30,7 +30,7 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
-  // partials: [Partials.Channel],
+  partials: [Partials.Channel],
 });
 
 sequelize
