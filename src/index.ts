@@ -12,7 +12,10 @@ import { registerRoutes } from '@/webhooks';
 import WebhookRoutes from './models/webhookRoutes';
 import RssPooler from './models/rss';
 
-const isDev = process.argv.some((arg) => arg.includes('ts-node'));
+const isDev =
+  process.argv.some((arg) => arg.includes('ts-node')) ||
+  process.env.NODE_ENV === 'development';
+console.log('isDev', isDev);
 const app: express.Application = express();
 const port: number = parseInt(process.env.PORT || '3000');
 

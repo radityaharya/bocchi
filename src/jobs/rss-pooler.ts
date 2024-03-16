@@ -3,6 +3,7 @@ import RssPooler from '@/models/rss';
 import fetch from 'node-fetch';
 import Parser from 'rss-parser';
 import config from '@/config';
+import logger from '@/utils/logger';
 
 const parser = new Parser();
 
@@ -42,7 +43,7 @@ async function processFeed(feed: any, channel: TextChannel): Promise<void> {
   try {
     rss = await fetchRss(feed);
   } catch (err) {
-    console.error(`Failed to fetch or parse RSS feed at ${feed.url}:`, err);
+    logger.error(err, 'Error fetching RSS feed');
     return;
   }
 
@@ -52,7 +53,7 @@ async function processFeed(feed: any, channel: TextChannel): Promise<void> {
 
   const lastItem = rss.items[0];
   const lastItemDate = new Date(
-    lastItem.isoDate || lastItem.pubDate || lastItem.date
+    lastItem.isoDate || lastItem.pubDate || lastItem.date,
   );
   const lastItemDateString = lastItemDate.toString();
 
@@ -60,7 +61,7 @@ async function processFeed(feed: any, channel: TextChannel): Promise<void> {
     feed.lastCheckedString !== lastItem.content &&
     feed.lastCheckedString !== lastItem.contentSnippet
   ) {
-    console.log(`New item in RSS feed <${feed.url}>: ${lastItem.title}`);
+    logger.info(`New item in RSS feed <${feed.url}>: ${lastItem.title}`);
 
     const embed = new EmbedBuilder()
       .setTitle(lastItem.title)
@@ -77,7 +78,7 @@ async function processFeed(feed: any, channel: TextChannel): Promise<void> {
 
     feed.lastCheckedString = lastItem.content || lastItem.contentSnippet || '';
   } else {
-    console.log(`No new items in RSS feed <${feed.url}>`);
+    logger.debug(`No new items in RSS feed <${feed.url}>`);
   }
 
   feed.lastChecked = new Date();
@@ -90,20 +91,20 @@ async function processFeed(feed: any, channel: TextChannel): Promise<void> {
  * @returns A Promise that resolves when the RSS feeds have been checked and processed.
  */
 async function rssPooler(client: Client): Promise<void> {
-  console.log('Checking RSS feeds for updates...');
+  logger.info('Checking RSS feeds for updates...');
   try {
     const feeds = await RssPooler.findAll();
     const channel = (await client.channels.fetch(
-      config.discord.rss_channel_id
+      config.discord.rss_channel_id,
     )) as TextChannel;
 
     await Promise.all(feeds.map((feed) => processFeed(feed, channel)));
 
     if (feeds.length > 0) {
-      console.log(`Checked ${feeds.length} RSS feeds for updates.`);
+      logger.debug(`Checked ${feeds.length} RSS feeds for updates.`);
     }
   } catch (err) {
-    console.error(err);
+    logger.error(err);
   }
 }
 

@@ -1,4 +1,4 @@
-import format from 'date-fns/format';
+import { format } from 'date-fns/format';
 import {
   Collection,
   DiscordAPIError,
@@ -14,7 +14,7 @@ import config from '@/config';
 export function buildContext(
   messages: Array<any>,
   userMessage: string,
-  instruction?: string
+  instruction?: string,
 ): Array<any> {
   if (!instruction || instruction === 'Default') {
     instruction = config.bot.instruction;
@@ -75,7 +75,7 @@ export function buildContext(
 export function buildThreadContext(
   messages: Collection<string, Message>,
   userMessage: string,
-  botId: string
+  botId: string,
 ): Array<OpenAI.Chat.ChatCompletionMessageParam> {
   if (messages.size === 0) {
     return buildContext([], userMessage);
@@ -111,7 +111,7 @@ export function buildThreadContext(
           message.type === MessageType.Default &&
           message.content &&
           message.embeds.length === 0 &&
-          (message.mentions.members?.size ?? 0) === 0
+          (message.mentions.members?.size ?? 0) === 0,
       )
       .map((message) => {
         return {
@@ -129,7 +129,7 @@ export function buildThreadContext(
 export function buildDirectMessageContext(
   messages: Collection<string, Message>,
   userMessage: string,
-  botId: string
+  botId: string,
 ): Array<OpenAI.Chat.ChatCompletionMessageParam> {
   if (messages.size === 0) {
     return buildContext([], userMessage);
@@ -141,7 +141,7 @@ export function buildDirectMessageContext(
         message.type === MessageType.Default &&
         message.content &&
         message.embeds.length === 0 &&
-        (message.mentions.members?.size ?? 0) === 0
+        (message.mentions.members?.size ?? 0) === 0,
     )
     .map((message) => {
       return {
@@ -156,7 +156,7 @@ export function buildDirectMessageContext(
 
 export async function detachComponents(
   messages: Collection<string, Message>,
-  botId: string
+  botId: string,
 ): Promise<void> {
   try {
     await Promise.all(
@@ -164,7 +164,7 @@ export async function detachComponents(
         if (message.author.id === botId && message.components.length > 0) {
           return message.edit({ components: [] });
         }
-      })
+      }),
     );
   } catch (err) {
     logError(err);

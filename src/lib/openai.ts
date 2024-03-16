@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { truncate } from 'lodash';
 import OpenAI from 'openai';
-
+import logger from '@/utils/logger';
 import config from '@/config';
 
 const openai = new OpenAI({
@@ -23,11 +23,10 @@ export interface CompletionResponse {
 }
 
 export async function createChatCompletion(
-  messages: Array<OpenAI.Chat.ChatCompletionMessageParam>
+  messages: Array<OpenAI.Chat.ChatCompletionMessageParam>,
 ): Promise<CompletionResponse> {
   try {
-    console.log(messages);
-
+    logger.info('🤖 Generating response');
     const completion = await openai.chat.completions.create({
       messages,
       model: config.openai.model,
@@ -140,7 +139,7 @@ export async function createImage(prompt: string): Promise<CompletionResponse> {
 
 export async function generateTitle(
   userMessage: string,
-  botMessage: string
+  botMessage: string,
 ): Promise<string> {
   const messages = [
     {
@@ -193,12 +192,14 @@ export async function generateTitle(
 function logError(err: unknown): void {
   if (axios.isAxiosError(err)) {
     if (err.response) {
-      console.log(err.response.status);
-      console.log(err.response.data);
+      logger.error(
+        { status: err.response.status, data: err.response.data },
+        'Axios error with response',
+      );
     } else {
-      console.log(err.message);
+      logger.error(err.message, 'Axios error without response');
     }
   } else {
-    console.log(err);
+    logger.error(err, 'Unknown error');
   }
 }

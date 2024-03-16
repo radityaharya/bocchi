@@ -4,7 +4,7 @@ import { Client } from '@biscxit/discord-module-loader';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-
+import logger from '@/utils/logger';
 import WebhookRoutes from '@/models/webhookRoutes';
 
 const isDev = process.argv.some((arg) => arg.includes('ts-node'));
@@ -31,7 +31,7 @@ async function importRoute(file: string, routesPath: string): Promise<Route[]> {
     const routeExports = await import(filePath);
     const routePath = routeExports.path;
     const routeHandlers = Object.fromEntries(
-      Object.entries(routeExports).filter(([key]) => key !== 'path')
+      Object.entries(routeExports).filter(([key]) => key !== 'path'),
     );
 
     if (typeof routePath !== 'string') {
@@ -41,7 +41,7 @@ async function importRoute(file: string, routesPath: string): Promise<Route[]> {
     const methodHandlerPairs = Object.entries(routeHandlers).filter(
       ([method, handler]) =>
         VALID_METHODS.includes(method as (typeof VALID_METHODS)[number]) &&
-        typeof handler === 'function'
+        typeof handler === 'function',
     );
 
     if (methodHandlerPairs.length === 0) {
@@ -50,7 +50,7 @@ async function importRoute(file: string, routesPath: string): Promise<Route[]> {
 
     return methodHandlerPairs.map(([method, handler]) => {
       const typedHandler = handler as (
-        client: Client
+        client: Client,
       ) => (req: Request, res: Response) => void;
 
       return {
@@ -61,7 +61,7 @@ async function importRoute(file: string, routesPath: string): Promise<Route[]> {
       };
     });
   } catch (error) {
-    console.error(`Failed to import route from file ${file}`, error);
+    logger.error(error, `Failed to import route file ${file}`);
     return [];
   }
 }
@@ -71,20 +71,23 @@ export async function registerRoutes(client: Client) {
     path.resolve(),
     isDev ? 'src' : 'dist',
     'webhooks',
-    'routes'
+    'routes',
   );
   const routeFiles = fs.readdirSync(routesPath);
   const routes: Route[] = [];
 
   const importedRoutes = await Promise.all(
-    routeFiles.map((file) => importRoute(file, routesPath))
+    routeFiles.map((file) => importRoute(file, routesPath)),
   );
 
   const dbRoutes = await WebhookRoutes.findAll();
-  const routeSecrets = dbRoutes.reduce((acc, route) => {
-    acc[route.id] = route.secret;
-    return acc;
-  }, {} as Record<string, string>);
+  const routeSecrets = dbRoutes.reduce(
+    (acc, route) => {
+      acc[route.id] = route.secret;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
   importedRoutes.flat().forEach((route) => {
     route.secret = routeSecrets[route.path];
   });
@@ -94,7 +97,7 @@ export async function registerRoutes(client: Client) {
     return !currentRoutes.some((route) => route.path === dbRoute.path);
   });
   const deletePromises = deletedRoutes.map((route) => {
-    console.log('Deleting route:', route.path);
+    logger.info(route, 'Deleting route');
     return route.destroy();
   });
   await Promise.all(deletePromises);
@@ -151,7 +154,7 @@ export async function registerRoutes(client: Client) {
 
   router.all('*', (req, res) => {
     const matchedRoute = router.stack.find(
-      (route) => route.route.path === req.path
+      (route) => route.route.path === req.path,
     );
     if (matchedRoute && !matchedRoute.route.methods[req.method.toLowerCase()]) {
       res.status(405).send('Method Not Allowed');
@@ -160,19 +163,28 @@ export async function registerRoutes(client: Client) {
     }
   });
 
-  const groupedRoutes = routes.reduce((acc, route) => {
-    if (!acc[route.path]) {
-      acc[route.path] = {};
-    }
-    acc[route.path][route.method] = {
-      handler: route.handler,
-      isProtected: route.isProtected,
-      secret: route.secret || '',
-    };
-    return acc;
-  }, {} as Record<string, Record<string, { handler: Function; isProtected: boolean; secret: string }>>);
+  const groupedRoutes = routes.reduce(
+    (acc, route) => {
+      if (!acc[route.path]) {
+        acc[route.path] = {};
+      }
+      acc[route.path][route.method] = {
+        handler: route.handler,
+        isProtected: route.isProtected,
+        secret: route.secret || '',
+      };
+      return acc;
+    },
+    {} as Record<
+      string,
+      Record<
+        string,
+        { handler: Function; isProtected: boolean; secret: string }
+      >
+    >,
+  );
 
-  console.log('Webhook routes registered:', groupedRoutes);
+  logger.info(groupedRoutes, 'Registered routes');
 
   return router;
 }
