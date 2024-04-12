@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { Request, Response, Router } from 'express';
-import { Client } from '@biscxit/discord-module-loader';
+import { Client } from '@/lib/module-loader';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import logger from '@/utils/logger';
 import WebhookRoutes from '@/models/webhookRoutes';
+import { runFromSrc } from '@/utils/runFromSrc';
+import config from '@/config';
 
-const isDev = process.argv.some((arg) => arg.includes('ts-node'));
 const router = Router();
 const VALID_METHODS = ['get', 'post', 'put', 'delete'] as const;
 
@@ -19,6 +20,12 @@ type Route = {
   secret?: string;
 };
 
+/**
+ * Imports a route file and returns an array of Route objects.
+ * @param file - The name of the file to import.
+ * @param routesPath - The path to the directory containing the route files.
+ * @returns A Promise that resolves to an array of Route objects.
+ */
 async function importRoute(file: string, routesPath: string): Promise<Route[]> {
   try {
     const filePath = path.join(routesPath, file);
@@ -66,33 +73,67 @@ async function importRoute(file: string, routesPath: string): Promise<Route[]> {
   }
 }
 
-export async function registerRoutes(client: Client) {
-  const routesPath = path.join(
-    path.resolve(),
-    isDev ? 'src' : 'dist',
-    'webhooks',
-    'routes',
-  );
-  const routeFiles = fs.readdirSync(routesPath);
-  const routes: Route[] = [];
+/**
+ * Registers a route in the router with the provided configuration.
+ * @param route - The route configuration object.
+ * @param client - Discord client object.
+ * @param router - The router object.
+ * @returns The registered route information.
+ */
+async function registerRoute(
+  route: Route,
+  client: Client,
+  router: Router,
+): Promise<Route> {
+  const { method, path: routePath, handler, isProtected, secret } = route;
+  const handlers = [
+    (req: Request, res: Response, next: () => void) => {
+      if (isProtected) {
+        const requestSecret =
+          req.query.secret || req.headers['x-webhook-secret'];
 
-  const importedRoutes = await Promise.all(
-    routeFiles.map((file) => importRoute(file, routesPath)),
-  );
-
-  const dbRoutes = await WebhookRoutes.findAll();
-  const routeSecrets = dbRoutes.reduce(
-    (acc, route) => {
-      acc[route.id] = route.secret;
-      return acc;
+        if (requestSecret !== secret) {
+          res.status(403).send('Forbidden');
+          return;
+        }
+      }
+      next();
     },
-    {} as Record<string, string>,
-  );
-  importedRoutes.flat().forEach((route) => {
-    route.secret = routeSecrets[route.path];
-  });
-  const currentRoutes = importedRoutes.flat();
+    handler(client),
+  ];
+  (
+    router[method as keyof Router] as (
+      path: string,
+      ...handlers: Array<
+        (req: Request, res: Response, next: () => void) => void
+      >
+    ) => void
+  )(routePath, ...handlers);
 
+  // Sync route to the database
+  const [webhookRoute, created] = await WebhookRoutes.findOrCreate({
+    where: { path: routePath },
+    defaults: {
+      isProtected,
+      secret: secret || crypto.randomBytes(5).toString('hex'),
+    },
+  });
+
+  if (!created) {
+    await webhookRoute.update({ isProtected, secret });
+  }
+
+  return {
+    method,
+    path: routePath,
+    handler,
+    isProtected,
+    secret: webhookRoute.secret,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function deleteRoutes(dbRoutes: any[], currentRoutes: Route[]) {
   const deletedRoutes = dbRoutes.filter((dbRoute) => {
     return !currentRoutes.some((route) => route.path === dbRoute.path);
   });
@@ -101,69 +142,10 @@ export async function registerRoutes(client: Client) {
     return route.destroy();
   });
   await Promise.all(deletePromises);
+}
 
-  const routePromises = importedRoutes.flat().map(async (route) => {
-    const { method, path: routePath, handler, isProtected, secret } = route;
-    const handlers = [
-      (req: Request, res: Response, next: () => void) => {
-        if (isProtected) {
-          const requestSecret =
-            req.query.secret || req.headers['x-webhook-secret'];
-
-          if (requestSecret !== secret) {
-            res.status(403).send('Forbidden');
-            return;
-          }
-        }
-        next();
-      },
-      handler(client),
-    ];
-    (
-      router[method as keyof Router] as (
-        path: string,
-        ...handlers: Array<
-          (req: Request, res: Response, next: () => void) => void
-        >
-      ) => void
-    )(routePath, ...handlers);
-
-    // Sync route to the database
-    const [webhookRoute, created] = await WebhookRoutes.findOrCreate({
-      where: { path: routePath },
-      defaults: {
-        isProtected,
-        secret: secret || crypto.randomBytes(5).toString('hex'),
-      },
-    });
-
-    routes.push({
-      method,
-      path: routePath,
-      handler,
-      isProtected,
-      secret: webhookRoute.secret,
-    });
-
-    if (!created) {
-      await webhookRoute.update({ isProtected, secret });
-    }
-  });
-
-  await Promise.all(routePromises);
-
-  router.all('*', (req, res) => {
-    const matchedRoute = router.stack.find(
-      (route) => route.route.path === req.path,
-    );
-    if (matchedRoute && !matchedRoute.route.methods[req.method.toLowerCase()]) {
-      res.status(405).send('Method Not Allowed');
-    } else {
-      res.status(404).send('Not Found');
-    }
-  });
-
-  const groupedRoutes = routes.reduce(
+function groupRoutes(routes: Route[]) {
+  return routes.reduce(
     (acc, route) => {
       if (!acc[route.path]) {
         acc[route.path] = {};
@@ -183,8 +165,66 @@ export async function registerRoutes(client: Client) {
       >
     >,
   );
+}
 
-  logger.info(groupedRoutes, 'Registered routes');
+export async function registerRoutes(client: Client) {
+  const routesPath = path.join(
+    path.resolve(),
+    runFromSrc ? 'src' : 'dist',
+    'webhooks',
+    'routes',
+  );
+  const routeFiles = fs.readdirSync(routesPath);
+
+  const importedRoutes = await Promise.all(
+    routeFiles.map((file) => importRoute(file, routesPath)),
+  );
+
+  const dbRoutes = await WebhookRoutes.findAll();
+  const routeSecrets = dbRoutes.reduce(
+    (acc, route) => {
+      acc[route.path] = route.secret;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+  importedRoutes.flat().forEach((route) => {
+    route.secret = routeSecrets[route.path];
+  });
+  const currentRoutes = importedRoutes.flat();
+
+  await deleteRoutes(dbRoutes, currentRoutes);
+
+  const routePromises = currentRoutes.map((route) =>
+    registerRoute(route, client, router),
+  );
+  const registeredRoutes = await Promise.all(routePromises);
+
+  router.all('*', (req, res) => {
+    const matchedRoute = router.stack.find(
+      (route) => route.route.path === req.path,
+    );
+    if (matchedRoute && !matchedRoute.route.methods[req.method.toLowerCase()]) {
+      res.status(405).send('Method Not Allowed');
+    } else {
+      res.status(404).send('Not Found');
+    }
+  });
+
+  const groupedRoutes = groupRoutes(registeredRoutes);
+
+  const baseUrl = config.bot.base_url;
+  const logInfo = Object.entries(groupedRoutes).map(([path, methods]) => {
+    return Object.entries(methods).map(([method, { isProtected, secret }]) => {
+      return {
+        method,
+        endpoint: `${baseUrl}/webhooks${path}?secret=${secret}&channelId=[channel_id]`,
+        isProtected,
+      };
+    });
+  });
+
+  logger.info(logInfo, 'Registered routes');
 
   return router;
 }

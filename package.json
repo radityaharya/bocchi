@@ -9,17 +9,16 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "NODE_ENV=development bun src/index.ts",
+    "dev:node": "nodemon src/index.ts",
     "build": "rimraf dist && tsc && tsc-alias",
-    "start": "node dist/index.js",
+    "start": "bun --bun src/index.ts",
+    "start:node": "bun dist/index.js",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
-    "test": "echo \"No test specified\"",
-    "version": "npm run build",
-    "prepare": "husky install"
+    "test": "echo \"No test specified\""
   },
   "dependencies": {
-    "@biscxit/discord-module-loader": "^0.5.0",
     "@types/body-parser": "^1.19.5",
     "@types/express": "^4.17.21",
     "axios": "^1.6.8",
@@ -35,9 +34,11 @@
     "lodash": "^4.17.21",
     "openai": "^4.29.1",
     "pg": "^8.11.3",
+    "pino": "^8.20.0",
     "rate-limiter-flexible": "^5.0.0",
     "rss-parser": "^3.13.0",
     "sequelize": "^6.37.1",
+    "tiny-glob": "^0.2.9",
     "tmp-promise": "^3.0.3"
   },
   "devDependencies": {

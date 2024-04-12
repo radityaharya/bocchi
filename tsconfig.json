@@ -20,7 +20,8 @@
     "removeComments": true,
     "sourceMap": false,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@module-loader/*": ["./src/lib/module-loader/*"]
     }
   },
   "include": ["src/**/*.ts"],

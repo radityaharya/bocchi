@@ -1,4 +1,4 @@
-import { Event } from '@biscxit/discord-module-loader';
+import { Event } from '@/lib/module-loader';
 import {
   ChannelType,
   Client,
@@ -14,9 +14,9 @@ import {
 import { delay, isEmpty, truncate } from 'lodash';
 
 import config from '@/config';
-import { createActionRow, createRegenerateButton } from '@/lib/buttons';
+// import { createActionRow, createRegenerateButton } from '@/lib/buttons';
 import {
-  buildContext,
+  // buildContext,
   buildDirectMessageContext,
   buildThreadContext,
   detachComponents,
@@ -29,7 +29,7 @@ import Conversation from '@/models/conversation';
 async function handleThreadMessage(
   client: Client<true>,
   channel: ThreadChannel,
-  message: Message
+  message: Message,
 ) {
   if (
     channel.ownerId !== client.user.id ||
@@ -56,7 +56,7 @@ async function handleThreadMessage(
       await channel.sendTyping();
 
       const completion = await createChatCompletion(
-        buildThreadContext(messages, message.content, client.user.id)
+        buildThreadContext(messages, message.content, client.user.id),
       );
 
       if (completion.status !== CompletionStatus.Ok) {
@@ -64,7 +64,7 @@ async function handleThreadMessage(
           channel,
           message,
           completion.message,
-          completion.status === CompletionStatus.UnexpectedError
+          completion.status === CompletionStatus.UnexpectedError,
         );
 
         return;
@@ -78,7 +78,7 @@ async function handleThreadMessage(
 
       await channel.send({
         content: completion.message,
-        components: [createActionRow(createRegenerateButton())],
+        // components: [createActionRow(createRegenerateButton())],
       });
 
       const pruneInterval = Number(config.bot.prune_interval);
@@ -87,14 +87,14 @@ async function handleThreadMessage(
         await Conversation.update(
           {
             expiresAt: new Date(
-              Date.now() + 3600000 * Math.ceil(pruneInterval)
+              Date.now() + 3600000 * Math.ceil(pruneInterval),
             ),
           },
           {
             where: {
               channelId: channel.id,
             },
-          }
+          },
         );
       }
     } catch (err) {
@@ -110,7 +110,7 @@ async function handleThreadMessage(
 async function handleDirectMessage(
   client: Client<true>,
   channel: DMChannel,
-  message: Message
+  message: Message,
 ) {
   delay(async () => {
     console.log('DM received:', message.content);
@@ -127,7 +127,7 @@ async function handleDirectMessage(
           if (message.author.id === client.user.id) {
             return message.delete();
           }
-        })
+        }),
       );
       return;
     }
@@ -135,7 +135,7 @@ async function handleDirectMessage(
     await channel.sendTyping();
 
     const completion = await createChatCompletion(
-      buildDirectMessageContext(messages, message.content, client.user.id)
+      buildDirectMessageContext(messages, message.content, client.user.id),
     );
 
     if (completion.status !== CompletionStatus.Ok) {
@@ -143,7 +143,7 @@ async function handleDirectMessage(
         channel,
         message,
         completion.message,
-        completion.status === CompletionStatus.UnexpectedError
+        completion.status === CompletionStatus.UnexpectedError,
       );
 
       return;
@@ -157,7 +157,7 @@ async function handleDirectMessage(
 
     await channel.send({
       content: completion.message,
-      components: [createActionRow(createRegenerateButton())],
+      // components: [createActionRow(createRegenerateButton())],
     });
   }, 2000);
 }
@@ -184,7 +184,7 @@ export default new Event({
         handleDirectMessage(
           client,
           channel.partial ? await channel.fetch() : channel,
-          message
+          message,
         );
         break;
       case ChannelType.PublicThread:
@@ -200,7 +200,7 @@ export default new Event({
 function isLastMessageStale(
   message: Message,
   lastMessage: Message | null,
-  botId: string
+  botId: string,
 ): boolean {
   return (
     lastMessage !== null &&
@@ -213,7 +213,7 @@ async function handleFailedRequest(
   channel: DMChannel | ThreadChannel,
   message: Message,
   error: string,
-  queueDeletion = false
+  queueDeletion = false,
 ): Promise<void> {
   // if (channel instanceof ThreadChannel) {
   //   try {

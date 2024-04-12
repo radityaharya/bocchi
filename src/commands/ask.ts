@@ -1,4 +1,4 @@
-import { Command } from '@biscxit/discord-module-loader';
+import { Command } from '@/lib/module-loader';
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 import { createErrorEmbed } from '@/lib/embeds';
@@ -14,18 +14,18 @@ export default new Command({
         .setName('question')
         .setDescription('The question to ask the bot.')
         .setRequired(true)
-        .setMaxLength(1024)
+        .setMaxLength(1024),
     )
     .addStringOption((option) =>
       option
         .setName('behavior')
         .setDescription('Specify how the bot should behave.')
-        .setMaxLength(1024)
+        .setMaxLength(1024),
     )
     .addBooleanOption((option) =>
       option
         .setName('hidden')
-        .setDescription('Whether or not the response should be shown.')
+        .setDescription('Whether or not the response should be shown.'),
     ),
   rateLimiter: {
     points: 5,
@@ -50,13 +50,13 @@ export default new Command({
     await interaction.deferReply({ ephemeral: input.hidden });
 
     const completion = await createChatCompletion(
-      buildContext([], input.question, input.behavior)
+      buildContext([], input.question, input.behavior),
     );
 
     await interaction.editReply(
       completion.status === CompletionStatus.Ok
         ? { content: completion.message }
-        : { embeds: [createErrorEmbed(completion.message)] }
+        : { embeds: [createErrorEmbed(completion.message)] },
     );
   },
 });

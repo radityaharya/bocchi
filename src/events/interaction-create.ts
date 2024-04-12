@@ -1,4 +1,4 @@
-import { Event } from '@biscxit/discord-module-loader';
+import { Event } from '@/lib/module-loader';
 import { EmbedBuilder } from '@discordjs/builders';
 import {
   ButtonInteraction,
@@ -25,7 +25,7 @@ async function handleRegenerateInteraction(
   interaction: ButtonInteraction,
   client: Client<true>,
   channel: ThreadChannel,
-  message: Message
+  message: Message,
 ) {
   const members = await channel.members.fetch();
 
@@ -33,7 +33,7 @@ async function handleRegenerateInteraction(
     await interaction.reply({
       embeds: [
         createErrorEmbed(
-          'You must be a member of this thread to regenerate responses.'
+          'You must be a member of this thread to regenerate responses.',
         ),
       ],
       ephemeral: true,
@@ -61,7 +61,7 @@ async function handleRegenerateInteraction(
           await handleFailedRequest(
             interaction,
             message,
-            'Could not find any previous messages.'
+            'Could not find any previous messages.',
           );
 
           return;
@@ -71,8 +71,8 @@ async function handleRegenerateInteraction(
           buildThreadContext(
             messages.filter((message) => message.id !== previousMessage.id),
             previousMessage.content,
-            client.user.id
-          )
+            client.user.id,
+          ),
         );
 
         if (completion.status !== CompletionStatus.Ok) {
@@ -80,7 +80,7 @@ async function handleRegenerateInteraction(
             interaction,
             message,
             completion.message,
-            completion.status === CompletionStatus.UnexpectedError
+            completion.status === CompletionStatus.UnexpectedError,
           );
 
           return;
@@ -132,7 +132,7 @@ export default new Event({
           interaction,
           interaction.client,
           channel,
-          interaction.message
+          interaction.message,
         );
         break;
       default:
@@ -145,7 +145,7 @@ async function handleFailedRequest(
   interaction: ButtonInteraction,
   message: Message,
   error: string,
-  queueDeletion = false
+  queueDeletion = false,
 ): Promise<void> {
   const embed = await message.reply({
     embeds: [

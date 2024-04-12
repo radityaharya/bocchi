@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { Client } from '@biscxit/discord-module-loader';
+import { Client } from '@/lib/module-loader';
 import { Colors, EmbedBuilder, TextChannel, User } from 'discord.js';
 export const path = '/railway';
 export const isProtected = true;
@@ -61,7 +61,7 @@ export function post(client: Client) {
           {
             name: 'Status',
             value: status,
-          }
+          },
         );
       const channelId = req.query.channelId as string | undefined;
       if (!channelId) {

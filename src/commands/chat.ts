@@ -1,4 +1,4 @@
-import { Command } from '@biscxit/discord-module-loader';
+import { Command } from '@/lib/module-loader';
 import {
   ChannelType,
   ChatInputCommandInteraction,
@@ -40,13 +40,13 @@ export default new Command({
         .setName('message')
         .setDescription('The message to start the conversation with.')
         .setRequired(true)
-        .setMaxLength(1024)
+        .setMaxLength(1024),
     )
     .addStringOption((option) =>
       option
         .setName('behavior')
         .setDescription('Specify how the bot should behave.')
-        .setMaxLength(1024)
+        .setMaxLength(1024),
     )
     .setDMPermission(false),
   botPermissions: [
@@ -96,7 +96,7 @@ export default new Command({
       });
 
       const completion = await createChatCompletion(
-        buildContext([], input.message, input.behavior)
+        buildContext([], input.message, input.behavior),
       );
 
       if (completion.status !== CompletionStatus.Ok) {
@@ -106,7 +106,7 @@ export default new Command({
               interaction.user,
               input.message,
               input.behavior,
-              completion.message
+              completion.message,
             ),
           ],
         });
@@ -160,7 +160,7 @@ export default new Command({
               interaction.user,
               input.message,
               input.behavior,
-              thread
+              thread,
             ),
           ],
         });
@@ -196,7 +196,7 @@ export default new Command({
             interaction.user,
             input.message,
             input.behavior,
-            error
+            error,
           ),
         ],
       });

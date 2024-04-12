@@ -1,4 +1,4 @@
-import { Event } from '@biscxit/discord-module-loader';
+import { Event } from '@/lib/module-loader';
 import Cron from 'croner';
 import { Client, Events } from 'discord.js';
 
@@ -30,7 +30,7 @@ export default new Event({
 
     console.log(`\nLogged in as ${client.user.tag}!`);
     console.log(
-      `You can invite this bot with the following URL: ${config.bot.invite_url}\n`
+      `You can invite this bot with the following URL: ${config.bot.invite_url}\n`,
     );
 
     await job.trigger();

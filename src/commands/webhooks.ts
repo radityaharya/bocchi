@@ -1,5 +1,5 @@
 import WebhookRoutes from '@/models/webhookRoutes';
-import { Command } from '@biscxit/discord-module-loader';
+import { Command } from '@/lib/module-loader';
 import {
   ChatInputCommandInteraction,
   Colors,
@@ -46,7 +46,7 @@ export default new Command({
             {
               name: 'URL',
               value: webhookUrl,
-            }
+            },
           )
           .setTimestamp()
           .setFooter({

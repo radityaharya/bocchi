@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import RssPooler from '@/models/rss';
-import { Command } from '@biscxit/discord-module-loader';
+import { Command } from '@/lib/module-loader';
 import { ChatInputCommandInteraction } from 'discord.js';
 import Parser from 'rss-parser';
 import axios from 'axios';

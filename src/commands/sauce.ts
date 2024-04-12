@@ -1,4 +1,4 @@
-import { Command } from '@biscxit/discord-module-loader';
+import { Command } from '@/lib/module-loader';
 import {
   ChatInputCommandInteraction,
   Colors,

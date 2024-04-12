@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { Client } from '@biscxit/discord-module-loader';
+import { Client } from '@/lib/module-loader';
 import { Colors, EmbedBuilder, TextChannel } from 'discord.js';
 import { file as tmpFile } from 'tmp-promise';
 import fs from 'fs';
@@ -13,10 +13,9 @@ export const isProtected = true;
 export function post(client: Client) {
   return async function (req: Request, res: Response) {
     try {
-      const channelId = req.query.channelId as string | undefined;
-
+      const channelId = req?.query?.channelId as string;
       if (!channelId) {
-        res.status(400).send('Missing channelId');
+        res.status(400).send('Missing channelId query parameter');
         return;
       }
 
@@ -34,11 +33,12 @@ export function post(client: Client) {
           headers: req.headers,
         },
         null,
-        2
+        2,
       );
       await writeFile(tmp.path, data);
 
       await channel.send({
+        files: [tmp.path],
         embeds: [
           new EmbedBuilder()
             .setTitle('Generic Webhook Received')
@@ -47,7 +47,6 @@ export function post(client: Client) {
             .setTimestamp()
             .setFooter({ text: 'Generic Webhook' }),
         ],
-        files: [tmp.path],
       });
 
       await tmp.cleanup();

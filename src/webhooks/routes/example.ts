@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Request, Response } from 'express';
-import { Client } from '@biscxit/discord-module-loader';
+import { Client } from '@/lib/module-loader';
 
 export const path = '/example';
 

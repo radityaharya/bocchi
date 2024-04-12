@@ -1,21 +1,19 @@
 import express from 'express';
+import { resolve } from 'path';
 import bodyParser from 'body-parser';
 import helmet from 'helmet';
-import { Client } from '@biscxit/discord-module-loader';
-import { GatewayIntentBits, Partials } from 'discord.js';
+import { Client } from '@/lib/module-loader';
+import { ActivityType, GatewayIntentBits, Partials } from 'discord.js';
 import config from '@/config';
 import sequelize from '@/lib/sequelize';
 import Conversation from '@/models/conversation';
-import Config from '@/models/config';
+// import Config from '@/models/config';
+import { runFromSrc } from '@/utils/runFromSrc';
 
 import { registerRoutes } from '@/webhooks';
 import WebhookRoutes from './models/webhookRoutes';
 import RssPooler from './models/rss';
-
-const isDev =
-  process.argv.some((arg) => arg.includes('ts-node')) ||
-  process.env.NODE_ENV === 'development';
-console.log('isDev', isDev);
+console.log('runFromSrc', runFromSrc);
 const app: express.Application = express();
 const port: number = parseInt(process.env.PORT || '3000');
 
@@ -24,8 +22,11 @@ app.use(bodyParser.json());
 
 const client = new Client({
   moduleLoader: {
-    eventsDir: isDev ? 'src/events' : 'dist/events',
-    commandsDir: isDev ? 'src/commands' : 'dist/commands',
+    eventsDir: resolve(__dirname, runFromSrc ? './events' : '../dist/events'),
+    commandsDir: resolve(
+      __dirname,
+      runFromSrc ? './commands' : '../dist/commands',
+    ),
   },
   intents: [
     GatewayIntentBits.Guilds,
@@ -33,28 +34,61 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel, Partials.GuildScheduledEvent],
 });
 
-sequelize
-  .authenticate()
-  .then(async () => {
-    await Conversation.sync();
-    await WebhookRoutes.sync();
-    await RssPooler.sync();
+// Sync models
+async function syncModels() {
+  await Conversation.sync();
+  await WebhookRoutes.sync();
+  await RssPooler.sync();
+}
 
-    await client.initialize(config.discord.token as string);
-    const router = await registerRoutes(client);
-    app.use('/webhooks', router);
+// Initialize client
+async function initializeClient() {
+  await client.initialize(config.discord.token as string);
+  client.user?.setActivity('Bocchi the cocck', { type: ActivityType.Custom });
+}
 
-    app.get('/health', (req, res) => {
-      res.send('OK');
+// Register routes
+async function registerWebhookRoutes() {
+  const router = await registerRoutes(client);
+  app.use('/webhooks', router);
+}
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.send('OK');
+});
+
+// Start server
+async function startServer() {
+  try {
+    await sequelize.authenticate();
+    await syncModels();
+    await initializeClient();
+    await registerWebhookRoutes();
+
+    const server = app.listen(port, () => {
+      console.log(`App listening at ${config.bot.base_url}`);
     });
 
-    app.listen(port, () => {
-      console.log(`App listening at http://localhost:${port}`);
+    process.on('SIGINT', () => {
+      console.log('\nGracefully shutting down');
+
+      server.close(() => {
+        console.log('Express server closed');
+      });
+
+      sequelize.close().then(() => {
+        console.log('Sequelize connection closed');
+      });
+
+      process.exit();
     });
-  })
-  .catch((err) => {
+  } catch (err) {
     console.error(err);
-  });
+  }
+}
+
+startServer();

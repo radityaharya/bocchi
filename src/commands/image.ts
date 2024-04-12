@@ -1,4 +1,4 @@
-import { Command } from '@biscxit/discord-module-loader';
+import { Command } from '@/lib/module-loader';
 import {
   ChatInputCommandInteraction,
   InteractionEditReplyOptions,
@@ -17,12 +17,12 @@ export default new Command({
         .setName('prompt')
         .setDescription('A text description of the desired image.')
         .setRequired(true)
-        .setMaxLength(1000)
+        .setMaxLength(1000),
     )
     .addBooleanOption((option) =>
       option
         .setName('hidden')
-        .setDescription('Whether or not the response should be shown.')
+        .setDescription('Whether or not the response should be shown.'),
     ),
   rateLimiter: {
     points: 3,

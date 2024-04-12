@@ -1,6 +1,6 @@
 # Bocchi
 
-Bocchi is a Discord bot built on top of [Wumpus GPT](https://github.com/capibawa/wumpus-gpt/).
+Bocchi is a Discord bot.
 
 ## Features
 
