@@ -29,6 +29,7 @@ import {
   createChatCompletion,
 } from '@/lib/openai';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -37,17 +38,21 @@ async function handleThreadMessage(
   channel: ThreadChannel,
   message: Message,
 ) {
-  if (
-    channel.ownerId !== client.user.id ||
-    channel.archived ||
-    channel.locked
-  ) {
+  if (channel.archived || channel.locked) {
+    logger.info('Thread is archived or locked');
     return;
   }
 
-  const prefix = getThreadPrefix();
+  const prefix = getThreadPrefix().trim();
+
+  logger.info('🗨️Thread Message Received', {
+    prefix,
+    channelName: channel.name,
+    messageContent: message.content,
+  });
 
   if (prefix && !channel.name.startsWith(prefix)) {
+    logger.info('Thread does not have the correct prefix');
     return;
   }
 
@@ -117,7 +122,7 @@ async function handleDirectMessage(
   message: Message,
 ) {
   delay(async () => {
-    console.log('DM received:', message.content);
+    logger.info('DM received:', message.content);
     if (isLastMessageStale(message, channel.lastMessage, client.user.id)) {
       return;
     }
@@ -185,7 +190,6 @@ export default new Event({
     }
 
     const channel = message.channel;
-
     switch (channel.type) {
       case ChannelType.DM:
         handleDirectMessage(
@@ -195,6 +199,8 @@ export default new Event({
         );
         break;
       case ChannelType.PublicThread:
+        handleThreadMessage(client, channel, message);
+        break;
       case ChannelType.PrivateThread:
         handleThreadMessage(client, channel, message);
         break;
