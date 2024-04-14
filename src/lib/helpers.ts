@@ -1,13 +1,13 @@
 import { format } from 'date-fns/format';
 import {
-  Collection,
+  type Collection,
   DiscordAPIError,
-  Message,
+  type Message,
   MessageType,
-  ThreadChannel,
+  type ThreadChannel,
 } from 'discord.js';
 import GPT3Tokenizer from 'gpt3-tokenizer';
-import OpenAI from 'openai';
+import type OpenAI from 'openai';
 
 import config from '@/config';
 

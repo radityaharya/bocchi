@@ -1,10 +1,11 @@
-import { Client, EmbedBuilder, TextChannel } from 'discord.js';
-import RssPooler from '@/models/rss';
+import { type Client, EmbedBuilder, type TextChannel } from 'discord.js';
 import fetch from 'node-fetch';
 import Parser from 'rss-parser';
 import config from '@/config';
 import logger from '@/utils/logger';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const parser = new Parser();
 
 /**
@@ -93,7 +94,7 @@ async function processFeed(feed: any, channel: TextChannel): Promise<void> {
 async function rssPooler(client: Client): Promise<void> {
   logger.info('Checking RSS feeds for updates...');
   try {
-    const feeds = await RssPooler.findAll();
+    const feeds = await prisma.rssPooler.findMany();
     const channel = (await client.channels.fetch(
       config.discord.rss_channel_id,
     )) as TextChannel;

@@ -1,9 +1,11 @@
 import { SlashCommandBuilder } from 'discord.js';
-import RssPooler from '@/models/rss';
 import { Command } from '@/lib/module-loader';
-import { ChatInputCommandInteraction } from 'discord.js';
+import type { ChatInputCommandInteraction } from 'discord.js';
 import Parser from 'rss-parser';
 import axios from 'axios';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const parser = new Parser();
 
@@ -47,10 +49,12 @@ export default new Command({
     const lastItem = rss.items[0];
 
     try {
-      await RssPooler.create({
-        url,
-        lastChecked: new Date(),
-        lastCheckedString: lastItem.content || lastItem.contentSnippet || '',
+      await prisma.rssPooler.create({
+        data: {
+          url,
+          lastChecked: new Date(),
+          lastCheckedString: lastItem.content || lastItem.contentSnippet || '',
+        },
       });
       await interaction.reply(`Successfully subscribed to ${url}`);
     } catch (err) {

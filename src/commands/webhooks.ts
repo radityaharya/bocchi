@@ -1,13 +1,16 @@
-import WebhookRoutes from '@/models/webhookRoutes';
 import { Command } from '@/lib/module-loader';
 import {
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
   Colors,
   EmbedBuilder,
   SlashCommandBuilder,
 } from 'discord.js';
 
 import config from '@/config';
+
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const BASE_URL = config.bot.base_url;
 
@@ -17,7 +20,7 @@ export default new Command({
     .setDescription('List all webhooks'),
   execute: async (interaction: ChatInputCommandInteraction) => {
     try {
-      const webhooks = await WebhookRoutes.findAll();
+      const webhooks = await prisma.webhookRoutes.findMany();
       const embeds = [];
 
       for (const [index, webhook] of webhooks.entries()) {
@@ -33,11 +36,11 @@ export default new Command({
           .addFields(
             {
               name: 'Path',
-              value: `\`${webhook.id}\``,
+              value: `\`${webhook.id}\`` || 'N/A',
             },
             {
               name: 'Secret',
-              value: webhook.secret,
+              value: webhook.secret || 'N/A',
             },
             {
               name: 'Is Protected',
@@ -45,7 +48,7 @@ export default new Command({
             },
             {
               name: 'URL',
-              value: webhookUrl,
+              value: webhookUrl || 'N/A',
             },
           )
           .setTimestamp()

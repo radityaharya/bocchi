@@ -28,7 +28,9 @@ import {
   CompletionStatus,
   createChatCompletion,
 } from '@/lib/openai';
-import Conversation from '@/models/conversation';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 async function handleThreadMessage(
   client: Client<true>,
@@ -88,18 +90,16 @@ async function handleThreadMessage(
       const pruneInterval = Number(config.bot.prune_interval);
 
       if (pruneInterval > 0) {
-        await Conversation.update(
-          {
+        await prisma.conversation.updateMany({
+          where: {
+            channelId: channel.id,
+          },
+          data: {
             expiresAt: new Date(
               Date.now() + 3600000 * Math.ceil(pruneInterval),
             ),
           },
-          {
-            where: {
-              channelId: channel.id,
-            },
-          },
-        );
+        });
       }
     } catch (err) {
       if (

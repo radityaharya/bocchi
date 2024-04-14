@@ -1,0 +1,38 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Conversation {
+  id         String   @id @default(uuid())
+  channelId  String   @unique
+  messageId  String   @unique
+  expiresAt  DateTime?
+}
+
+model WebhookRoutes {
+  id          String   @id @default(uuid())
+  path        String   @unique
+  isProtected Boolean  @default(false)
+  secret      String?  // Nullable
+}
+
+model Config {
+  id          String   @id @default(uuid())
+  environment String
+  config      Json
+}
+
+model RssPooler {
+  id                String   @id @default(uuid())
+  url               String   @unique
+  lastChecked       DateTime
+  lastCheckedString String?  // Nullable
+  etag              String?  // Nullable
+}

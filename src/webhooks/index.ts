@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { Request, Response, Router } from 'express';
-import { Client } from '@/lib/module-loader';
+import { type Request, type Response, Router } from 'express';
+import type { Client } from '@/lib/module-loader';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import logger from '@/utils/logger';
-import WebhookRoutes from '@/models/webhookRoutes';
 import { runFromSrc } from '@/utils/runFromSrc';
 import config from '@/config';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const router = Router();
 const VALID_METHODS = ['get', 'post', 'put', 'delete'] as const;
 
@@ -111,24 +112,25 @@ async function registerRoute(
   )(routePath, ...handlers);
 
   // Sync route to the database
-  const [webhookRoute, created] = await WebhookRoutes.findOrCreate({
+  const webhookRoute = await prisma.webhookRoutes.upsert({
     where: { path: routePath },
-    defaults: {
+    create: {
+      path: routePath,
       isProtected,
       secret: secret || crypto.randomBytes(5).toString('hex'),
     },
+    update: {
+      isProtected,
+      secret,
+    },
   });
-
-  if (!created) {
-    await webhookRoute.update({ isProtected, secret });
-  }
 
   return {
     method,
     path: routePath,
     handler,
     isProtected,
-    secret: webhookRoute.secret,
+    secret: webhookRoute.secret || '',
   };
 }
 
@@ -180,17 +182,17 @@ export async function registerRoutes(client: Client) {
     routeFiles.map((file) => importRoute(file, routesPath)),
   );
 
-  const dbRoutes = await WebhookRoutes.findAll();
+  const dbRoutes = await prisma.webhookRoutes.findMany();
   const routeSecrets = dbRoutes.reduce(
     (acc, route) => {
-      acc[route.path] = route.secret;
+      acc[route.path] = route.secret || '';
       return acc;
     },
     {} as Record<string, string>,
   );
-  importedRoutes.flat().forEach((route) => {
+  for (const route of importedRoutes.flat()) {
     route.secret = routeSecrets[route.path];
-  });
+  }
   const currentRoutes = importedRoutes.flat();
 
   await deleteRoutes(dbRoutes, currentRoutes);

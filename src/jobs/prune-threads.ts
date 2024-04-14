@@ -1,17 +1,19 @@
-import { Client, Colors, EmbedBuilder } from 'discord.js';
+import { type Client, Colors, EmbedBuilder } from 'discord.js';
 import { Op } from 'sequelize';
 
 import { destroyThread } from '@/lib/helpers';
-import Conversation from '@/models/conversation';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export default async function pruneThreads(
-  client: Client<boolean>
+  client: Client<boolean>,
 ): Promise<void> {
   try {
-    const conversations = await Conversation.findAll({
+    const conversations = await prisma.conversation.findMany({
       where: {
         expiresAt: {
-          [Op.lte]: new Date(),
+          lte: new Date(),
         },
       },
     });
@@ -25,12 +27,12 @@ export default async function pruneThreads(
         /* empty */
       }
 
-      if (channel && channel.isThread()) {
+      if (channel?.isThread()) {
         let message = null;
 
         try {
           message = await channel.parent?.messages.fetch(
-            conversation.messageId
+            conversation.messageId,
           );
         } catch (err) {
           /* empty */
@@ -46,7 +48,7 @@ export default async function pruneThreads(
                 .setTitle(embed.title)
                 .setDescription('Conversation deleted due to inactivity.')
                 .setFields(
-                  embed.fields.filter((field) => field.name !== 'Thread')
+                  embed.fields.filter((field) => field.name !== 'Thread'),
                 ),
             ],
           });

@@ -1,7 +1,7 @@
 import { Command } from '@/lib/module-loader';
 import {
   ChannelType,
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
   Colors,
   EmbedBuilder,
   PermissionsBitField,
@@ -29,7 +29,9 @@ import {
   createChatCompletion,
   generateTitle,
 } from '@/lib/openai';
-import Conversation from '@/models/conversation';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export default new Command({
   data: new SlashCommandBuilder()
@@ -123,14 +125,15 @@ export default new Command({
 
       try {
         const pruneInterval = Number(config.bot.prune_interval);
-
-        await Conversation.create({
-          channelId: thread.id,
-          messageId: (await interaction.fetchReply()).id,
-          expiresAt:
-            pruneInterval > 0
-              ? new Date(Date.now() + 3600000 * Math.ceil(pruneInterval))
-              : null,
+        await prisma.conversation.create({
+          data: {
+            channelId: thread.id,
+            messageId: (await interaction.fetchReply()).id,
+            expiresAt:
+              pruneInterval > 0
+                ? new Date(Date.now() + 3600000 * Math.ceil(pruneInterval))
+                : null,
+          },
         });
 
         await thread.send({

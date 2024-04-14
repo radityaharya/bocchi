@@ -5,14 +5,8 @@ import helmet from 'helmet';
 import { Client } from '@/lib/module-loader';
 import { ActivityType, GatewayIntentBits, Partials } from 'discord.js';
 import config from '@/config';
-import sequelize from '@/lib/sequelize';
-import Conversation from '@/models/conversation';
-// import Config from '@/models/config';
 import { runFromSrc } from '@/utils/runFromSrc';
-
 import { registerRoutes } from '@/webhooks';
-import WebhookRoutes from './models/webhookRoutes';
-import RssPooler from './models/rss';
 console.log('runFromSrc', runFromSrc);
 const app: express.Application = express();
 const port: number = parseInt(process.env.PORT || '3000');
@@ -37,13 +31,6 @@ const client = new Client({
   partials: [Partials.Channel, Partials.GuildScheduledEvent],
 });
 
-// Sync models
-async function syncModels() {
-  await Conversation.sync();
-  await WebhookRoutes.sync();
-  await RssPooler.sync();
-}
-
 // Initialize client
 async function initializeClient() {
   await client.initialize(config.discord.token as string);
@@ -64,8 +51,6 @@ app.get('/health', (req, res) => {
 // Start server
 async function startServer() {
   try {
-    await sequelize.authenticate();
-    await syncModels();
     await initializeClient();
     await registerWebhookRoutes();
 
@@ -78,10 +63,6 @@ async function startServer() {
 
       server.close(() => {
         console.log('Express server closed');
-      });
-
-      sequelize.close().then(() => {
-        console.log('Sequelize connection closed');
       });
 
       process.exit();
