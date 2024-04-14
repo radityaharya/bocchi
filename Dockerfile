@@ -21,4 +21,5 @@ COPY --from=prerelease /usr/src/app .
 
 ENV BUN=true
 EXPOSE 3000/tcp
+RUN bun run prisma:generate
 ENTRYPOINT ["bun", "start"]

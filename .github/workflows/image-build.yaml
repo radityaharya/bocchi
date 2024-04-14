@@ -12,8 +12,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: node
-            file: Dockerfile
+          - file: ./Dockerfile
             image_name: bocchi
 
     steps:
@@ -62,4 +61,3 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:latest
           platforms: linux/amd64,linux/arm64
-          target: ${{ matrix.target }}
