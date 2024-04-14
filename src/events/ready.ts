@@ -1,6 +1,6 @@
 import { Event } from '@/lib/module-loader';
 import Cron from 'croner';
-import { Client, Events } from 'discord.js';
+import { type Client, Events } from 'discord.js';
 
 import config from '@/config';
 import pruneThreads from '@/jobs/prune-threads';

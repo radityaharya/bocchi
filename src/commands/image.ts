@@ -1,7 +1,7 @@
 import { Command } from '@/lib/module-loader';
 import {
-  ChatInputCommandInteraction,
-  InteractionEditReplyOptions,
+  type ChatInputCommandInteraction,
+  type InteractionEditReplyOptions,
   SlashCommandBuilder,
 } from 'discord.js';
 

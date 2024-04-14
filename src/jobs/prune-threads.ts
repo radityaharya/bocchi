@@ -1,5 +1,4 @@
 import { type Client, Colors, EmbedBuilder } from 'discord.js';
-import { Op } from 'sequelize';
 
 import { destroyThread } from '@/lib/helpers';
 import { PrismaClient } from '@prisma/client';
@@ -56,8 +55,6 @@ export default async function pruneThreads(
 
         await destroyThread(channel);
       }
-
-      await conversation.destroy();
     }
 
     if (conversations.length > 0) {

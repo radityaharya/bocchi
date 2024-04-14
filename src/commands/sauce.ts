@@ -1,16 +1,16 @@
 import { Command } from '@/lib/module-loader';
 import {
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
   Colors,
   EmbedBuilder,
   SlashCommandBuilder,
 } from 'discord.js';
 import { createErrorEmbed } from '@/lib/embeds';
-import axios, { AxiosError } from 'axios';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import FormData from 'form-data';
+import axios from 'axios';
 
 type TraceMoeResultItem = {
   anilist: number;
@@ -88,7 +88,7 @@ async function getAnimeSauce(tempFilePath: string): Promise<TraceMoeResult> {
 async function getAnimeDetails(anilistId: number) {
   console.log('🚀 ~ getAnimeDetails ~ getAnimeDetails:', anilistId);
   const anilistResponse = await axios.post(
-    `https://graphql.anilist.co`,
+    'https://graphql.anilist.co',
     {
       query: `
       query ($id: Int) {

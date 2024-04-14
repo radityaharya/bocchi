@@ -1,6 +1,6 @@
 import { Command } from '@/lib/module-loader';
 import {
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
   Colors,
   EmbedBuilder,
   SlashCommandBuilder,

@@ -1,11 +1,11 @@
 import {
   Collection,
   Client as DiscordClient,
-  ClientOptions as DiscordClientOptions,
+  type ClientOptions as DiscordClientOptions,
   Events,
-  Interaction,
+  type Interaction,
 } from 'discord.js';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import type { RateLimiterMemory } from 'rate-limiter-flexible';
 
 import {
   deployCommands,
@@ -13,8 +13,8 @@ import {
   loadValidations,
 } from '@module-loader/handlers/commands';
 import { loadEvents } from '@module-loader/handlers/events';
-import Command from '@module-loader/structures/command';
-import Validation from '@module-loader/structures/validation';
+import type Command from '@module-loader/structures/command';
+import type Validation from '@module-loader/structures/validation';
 import { createErrorEmbed } from '@module-loader/utils/embeds';
 import logger from '@module-loader/utils/logger';
 

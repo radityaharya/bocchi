@@ -1,4 +1,9 @@
-import { Colors, EmbedBuilder, ThreadChannel, User } from 'discord.js';
+import {
+  Colors,
+  EmbedBuilder,
+  type ThreadChannel,
+  type User,
+} from 'discord.js';
 import { truncate } from 'lodash';
 
 export function createErrorEmbed(message: string): EmbedBuilder {
@@ -12,7 +17,7 @@ export function createThreadEmbed(
   user: User,
   message: string,
   behavior?: string,
-  thread?: ThreadChannel
+  thread?: ThreadChannel,
 ): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setColor(Colors.Green)
@@ -33,7 +38,7 @@ export function createThreadErrorEmbed(
   user: User,
   message: string,
   behavior?: string,
-  error?: string
+  error?: string,
 ): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(Colors.Red)

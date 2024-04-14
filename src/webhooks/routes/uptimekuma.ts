@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
-import { Client } from '@/lib/module-loader';
+import type { Client } from '@/lib/module-loader';
 import {
   Colors,
   EmbedBuilder,
-  TextChannel,
+  type TextChannel,
   GuildScheduledEventPrivacyLevel,
   GuildScheduledEventEntityType,
 } from 'discord.js';

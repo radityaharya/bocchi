@@ -1,4 +1,4 @@
-import Client from '@module-loader/structures/client';
+import type Client from '@module-loader/structures/client';
 import Event from '@module-loader/structures/event';
 import { getFiles } from '@module-loader/utils/helpers';
 import logger from '@module-loader/utils/logger';

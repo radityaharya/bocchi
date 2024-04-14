@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import { Client } from '@/lib/module-loader';
-import { Colors, EmbedBuilder, TextChannel } from 'discord.js';
+import type { Client } from '@/lib/module-loader';
+import { Colors, EmbedBuilder, type TextChannel } from 'discord.js';
 import { file as tmpFile } from 'tmp-promise';
 import fs from 'fs';
 import util from 'util';

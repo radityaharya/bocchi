@@ -1,4 +1,4 @@
-import { GuildMember } from 'discord.js';
+import type { GuildMember } from 'discord.js';
 
 import Validation from '@module-loader/structures/validation';
 import { createErrorEmbed } from '@module-loader/utils/embeds';

@@ -1,12 +1,12 @@
-import {
+import type {
   ChatInputCommandInteraction,
   ContextMenuCommandInteraction,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction,
 } from 'discord.js';
 
-import Client from '@module-loader/structures/client';
-import Command from '@module-loader/structures/command';
+import type Client from '@module-loader/structures/client';
+import type Command from '@module-loader/structures/command';
 
 export interface ValidationOptions {
   execute(

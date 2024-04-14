@@ -1,4 +1,4 @@
-import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
+import { RateLimiterMemory, type RateLimiterRes } from 'rate-limiter-flexible';
 
 import Validation from '@module-loader/structures/validation';
 import { createErrorEmbed } from '@module-loader/utils/embeds';

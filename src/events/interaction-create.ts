@@ -1,15 +1,15 @@
 import { Event } from '@/lib/module-loader';
 import { EmbedBuilder } from '@discordjs/builders';
 import {
-  ButtonInteraction,
+  type ButtonInteraction,
   ChannelType,
-  Client,
+  type Client,
   Colors,
   Events,
-  Interaction,
-  Message,
+  type Interaction,
+  type Message,
   RESTJSONErrorCodes,
-  ThreadChannel,
+  type ThreadChannel,
 } from 'discord.js';
 import { delay } from 'lodash';
 import { RateLimiterMemory } from 'rate-limiter-flexible';

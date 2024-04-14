@@ -16,19 +16,21 @@ export function buildContext(
   userMessage: string,
   instruction?: string,
 ): Array<any> {
-  if (!instruction || instruction === 'Default') {
-    instruction = config.bot.instruction;
+  let finalInstruction = instruction;
+
+  if (!finalInstruction || finalInstruction === 'Default') {
+    finalInstruction = config.bot.instruction;
   }
 
-  instruction = instruction.trim();
+  finalInstruction = finalInstruction.trim();
 
-  if (!instruction.endsWith('.')) {
-    instruction += '.';
+  if (!finalInstruction.endsWith('.')) {
+    finalInstruction += '.';
   }
 
   const systemMessageContext = {
     role: 'system',
-    content: instruction + ` The current date is ${format(new Date(), 'PPP')}.`,
+    content: `${finalInstruction} The current date is ${format(new Date(), 'PPP')}.`,
     name: 'system',
   };
 
@@ -187,7 +189,7 @@ export async function destroyThread(channel: ThreadChannel): Promise<void> {
 }
 
 export function getThreadPrefix(): string {
-  return config.bot.thread_prefix ? config.bot.thread_prefix + ' ' : '';
+  return config.bot.thread_prefix ? `${config.bot.thread_prefix} ` : '';
 }
 
 export function isApiError(err: unknown): err is DiscordAPIError {

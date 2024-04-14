@@ -56,7 +56,6 @@ async function processFeed(feed: any, channel: TextChannel): Promise<void> {
   const lastItemDate = new Date(
     lastItem.isoDate || lastItem.pubDate || lastItem.date,
   );
-  const lastItemDateString = lastItemDate.toString();
 
   if (
     feed.lastCheckedString !== lastItem.content &&

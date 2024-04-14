@@ -1,6 +1,6 @@
 import { join } from 'path';
 
-import Client from '@module-loader/structures/client';
+import type Client from '@module-loader/structures/client';
 import Command from '@module-loader/structures/command';
 import Validation from '@module-loader/structures/validation';
 import { getFiles, getFilesFromPath } from '@module-loader/utils/helpers';

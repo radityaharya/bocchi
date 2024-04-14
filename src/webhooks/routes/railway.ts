@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import { Client } from '@/lib/module-loader';
-import { Colors, EmbedBuilder, TextChannel, User } from 'discord.js';
+import type { Client } from '@/lib/module-loader';
+import { Colors, EmbedBuilder, type TextChannel, User } from 'discord.js';
 export const path = '/railway';
 export const isProtected = true;
 export function post(client: Client) {

@@ -1,5 +1,8 @@
 import { Command } from '@/lib/module-loader';
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import {
+  type ChatInputCommandInteraction,
+  SlashCommandBuilder,
+} from 'discord.js';
 
 import { createErrorEmbed } from '@/lib/embeds';
 import { buildContext } from '@/lib/helpers';

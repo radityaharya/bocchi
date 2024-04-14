@@ -1,4 +1,4 @@
-import {
+import type {
   ChatInputCommandInteraction,
   ContextMenuCommandBuilder,
   ContextMenuCommandInteraction,
@@ -10,7 +10,7 @@ import {
 } from 'discord.js';
 
 import type { RateLimiterOptions } from '@module-loader/types/rate-limiter-options';
-import Client from '@module-loader/structures/client';
+import type Client from '@module-loader/structures/client';
 
 export interface CommandOptions {
   data:

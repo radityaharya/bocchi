@@ -2,15 +2,15 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  MessageActionRowComponentBuilder,
-  RestOrArray,
+  type MessageActionRowComponentBuilder,
+  type RestOrArray,
 } from 'discord.js';
 
 export function createActionRow(
   ...components: RestOrArray<MessageActionRowComponentBuilder>
 ): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-    ...components
+    ...components,
   );
 }
 
