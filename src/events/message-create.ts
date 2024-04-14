@@ -1,15 +1,15 @@
 import { Event } from '@/lib/module-loader';
 import {
   ChannelType,
-  Client,
+  type Client,
   Colors,
-  DMChannel,
+  type DMChannel,
   EmbedBuilder,
   Events,
-  Message,
+  type Message,
   MessageType,
   RESTJSONErrorCodes,
-  ThreadChannel,
+  type ThreadChannel,
 } from 'discord.js';
 import { delay, isEmpty, truncate } from 'lodash';
 
@@ -23,7 +23,11 @@ import {
   getThreadPrefix,
   isApiError,
 } from '@/lib/helpers';
-import { CompletionStatus, createChatCompletion } from '@/lib/openai';
+import {
+  type CompletionResponse,
+  CompletionStatus,
+  createChatCompletion,
+} from '@/lib/openai';
 import Conversation from '@/models/conversation';
 
 async function handleThreadMessage(
@@ -153,12 +157,15 @@ async function handleDirectMessage(
       return;
     }
 
-    await detachComponents(messages, client.user.id);
+    if (completion.message.includes('```')) {
+      await channel.send({
+        content: completion.message,
+      });
+    } else {
+      await splitSend(completion, channel);
+    }
 
-    await channel.send({
-      content: completion.message,
-      // components: [createActionRow(createRegenerateButton())],
-    });
+    await detachComponents(messages, client.user.id);
   }, 2000);
 }
 
@@ -196,6 +203,42 @@ export default new Event({
     }
   },
 });
+
+async function splitSend(completion: CompletionResponse, channel: DMChannel) {
+  const split_keys = ['%%%%', '\\.', '!', '\\?', '\\n', '\\r', '\\t'];
+  const split_regex = new RegExp(split_keys.join('|'), 'g');
+  const raw_split_messages = completion.message.split(split_regex);
+  const split_messages = [];
+  let temp_message = '';
+
+  for (const message of raw_split_messages) {
+    const trimmedMessage = message.trim();
+    if (trimmedMessage.length <= 1 && temp_message !== '') {
+      temp_message += ` ${trimmedMessage}`;
+    } else {
+      if (temp_message !== '') {
+        split_messages.push(temp_message);
+        temp_message = '';
+      }
+      temp_message = trimmedMessage;
+    }
+  }
+  if (temp_message !== '') {
+    split_messages.push(temp_message);
+  }
+
+  for (const message of split_messages) {
+    if (message.trim() !== '') {
+      await channel.sendTyping();
+      await new Promise((resolve) =>
+        setTimeout(resolve, (message.length / 20) * 1000),
+      );
+      await channel.send({
+        content: message,
+      });
+    }
+  }
+}
 
 function isLastMessageStale(
   message: Message,
