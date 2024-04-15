@@ -14,6 +14,7 @@
     "build": "rimraf dist && tsc && tsc-alias",
     "start": "bun --bun src/index.ts",
     "start:node": "bun dist/index.js",
+    "start:prod": "prisma migrate deploy && bun --bun src/index.ts",
     "lint": "eslint . --ext .ts",
     "format": "pretty-quick",
     "test": "echo \"No test specified\"",

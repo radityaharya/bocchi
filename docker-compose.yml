@@ -1,10 +1,22 @@
-version: '3'
-
 services:
   bocchi:
     build: .
-    image: bocchi
-    container_name: bocchi
-    env_file:
-      - .env
-    restart: unless-stopped
+    env_file: .env
+    ports:
+      - '6637:6637'
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://postgres:SuP3rS3cR3tP4ssw0rd@db:5432/bocchi
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: SuP3rS3cR3tP4ssw0rd
+      POSTGRES_DB: bocchi
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+volumes:
+  postgres_data:
