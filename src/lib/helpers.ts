@@ -77,6 +77,7 @@ export function buildContext(
 export function buildThreadContext(
   messages: Collection<string, Message>,
   userMessage: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   botId: string,
 ): Array<OpenAI.Chat.ChatCompletionMessageParam> {
   if (messages.size === 0) {

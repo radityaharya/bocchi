@@ -1,26 +1,20 @@
-import express from 'express';
 import { resolve } from 'path';
-import bodyParser from 'body-parser';
-import helmet from 'helmet';
 import { Client } from '@/lib/module-loader';
 import { ActivityType, GatewayIntentBits, Partials } from 'discord.js';
 import config from '@/config';
-import { runFromSrc } from '@/utils/runFromSrc';
 import { registerRoutes } from '@/webhooks';
-console.log('runFromSrc', runFromSrc);
-const app: express.Application = express();
-const port: number = parseInt(process.env.PORT || '3000');
+import { Hono } from 'hono';
+import { logger } from 'hono/logger';
 
-app.use(helmet());
-app.use(bodyParser.json());
+const app = new Hono();
+app.use(logger());
+const port: number = parseInt(process.env.PORT || '3000');
 
 const client = new Client({
   moduleLoader: {
-    eventsDir: resolve(__dirname, runFromSrc ? './events' : '../dist/events'),
-    commandsDir: resolve(
-      __dirname,
-      runFromSrc ? './commands' : '../dist/commands',
-    ),
+    eventsDir: resolve(__dirname, './events'),
+    commandsDir: resolve(__dirname, './commands'),
+    validationsDir: resolve(__dirname, './validations'),
   },
   intents: [
     GatewayIntentBits.Guilds,
@@ -40,13 +34,11 @@ async function initializeClient() {
 // Register routes
 async function registerWebhookRoutes() {
   const router = await registerRoutes(client);
-  app.use('/webhooks', router);
+  app.route('/webhooks', router);
 }
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.send('OK');
-});
+app.get('/health', (c) => c.text('OK'));
 
 // Start server
 async function startServer() {
@@ -54,16 +46,10 @@ async function startServer() {
     await initializeClient();
     await registerWebhookRoutes();
 
-    const server = app.listen(port, () => {
-      console.log(`App listening at ${config.bot.base_url}`);
-    });
-
     process.on('SIGINT', () => {
       console.log('\nGracefully shutting down');
 
-      server.close(() => {
-        console.log('Express server closed');
-      });
+      client.destroy();
 
       process.exit();
     });
@@ -73,3 +59,8 @@ async function startServer() {
 }
 
 startServer();
+
+export default {
+  port,
+  fetch: app.fetch,
+};

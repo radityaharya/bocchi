@@ -1,25 +1,36 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { type Request, type Response, Router } from 'express';
+import { Context, Hono } from 'hono';
+import { createFactory } from 'hono/factory';
 import type { Client } from '@/lib/module-loader';
 import fs from 'fs';
-import path from 'path';
+import { join, resolve } from 'path';
 import crypto from 'crypto';
 import logger from '@/utils/logger';
-import { runFromSrc } from '@/utils/runFromSrc';
 import config from '@/config';
 import { PrismaClient } from '@prisma/client';
+import { Env, HandlerResponse } from 'hono/types';
+import { type TextChannel } from 'discord.js';
 
-const prisma = new PrismaClient();
-const router = Router();
-const VALID_METHODS = ['get', 'post', 'put', 'delete'] as const;
-
+interface WebhookVars extends Env {
+  Variables: {
+    channel: TextChannel;
+    client: Client;
+  };
+}
+export type WebhookContext = Context<WebhookVars>;
 type Route = {
   method: (typeof VALID_METHODS)[number];
   path: string;
-  handler: (client: Client) => (req: Request, res: Response) => void;
+  handler: (client: Client) => (c: WebhookContext) => HandlerResponse<unknown>;
   isProtected: boolean;
   secret?: string;
 };
+
+const factory = createFactory();
+
+const prisma = new PrismaClient();
+
+const VALID_METHODS = ['get', 'post', 'put', 'delete'] as const;
 
 /**
  * Imports a route file and returns an array of Route objects.
@@ -27,9 +38,9 @@ type Route = {
  * @param routesPath - The path to the directory containing the route files.
  * @returns A Promise that resolves to an array of Route objects.
  */
-async function importRoute(file: string, routesPath: string): Promise<Route[]> {
+async function loadRoute(file: string, routesPath: string): Promise<Route[]> {
   try {
-    const filePath = path.join(routesPath, file);
+    const filePath = join(routesPath, file);
     const stats = fs.statSync(filePath);
 
     if (stats.isDirectory()) {
@@ -59,7 +70,7 @@ async function importRoute(file: string, routesPath: string): Promise<Route[]> {
     return methodHandlerPairs.map(([method, handler]) => {
       const typedHandler = handler as (
         client: Client,
-      ) => (req: Request, res: Response) => void;
+      ) => (c: Context) => HandlerResponse<unknown>;
 
       return {
         method: method as (typeof VALID_METHODS)[number],
@@ -74,45 +85,23 @@ async function importRoute(file: string, routesPath: string): Promise<Route[]> {
   }
 }
 
-/**
- * Registers a route in the router with the provided configuration.
- * @param route - The route configuration object.
- * @param client - Discord client object.
- * @param router - The router object.
- * @returns The registered route information.
- */
 async function registerRoute(
   route: Route,
   client: Client,
-  router: Router,
-): Promise<Route> {
+  router: Hono<WebhookVars>,
+) {
   const { method, path: routePath, handler, isProtected, secret } = route;
-  const handlers = [
-    (req: Request, res: Response, next: () => void) => {
-      if (isProtected) {
-        const requestSecret =
-          req.query.secret || req.headers['x-webhook-secret'];
 
-        if (requestSecret !== secret) {
-          res.status(403).send('Forbidden');
-          return;
-        }
-      }
-      next();
-    },
+  const handlers = factory.createHandlers(
+    M_ValidateMethod(method),
+    M_Secret(isProtected, secret),
+    M_Discord(client),
     handler(client),
-  ];
-  (
-    router[method as keyof Router] as (
-      path: string,
-      ...handlers: Array<
-        (req: Request, res: Response, next: () => void) => void
-      >
-    ) => void
-  )(routePath, ...handlers);
+  );
 
-  // Sync route to the database
-  const webhookRoute = await prisma.webhookRoutes.upsert({
+  (router[method as keyof Hono] as Function)(routePath, ...handlers);
+
+  await prisma.webhookRoutes.upsert({
     where: { path: routePath },
     create: {
       path: routePath,
@@ -125,26 +114,110 @@ async function registerRoute(
     },
   });
 
-  return {
-    method,
-    path: routePath,
-    handler,
-    isProtected,
-    secret: webhookRoute.secret || '',
-  };
+  return route;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function deleteRoutes(dbRoutes: any[], currentRoutes: Route[]) {
-  const deletedRoutes = dbRoutes.filter((dbRoute) => {
-    return !currentRoutes.some((route) => route.path === dbRoute.path);
+/**
+ * File based route initialization.
+ *
+ * @param client - Discord client object.
+ * @returns Hono instance with registered routes.
+ */
+export async function registerRoutes(client: Client) {
+  const routesPath = join(resolve(), 'src', 'webhooks', 'routes');
+  const routeFiles = fs.readdirSync(routesPath);
+  const WebhookRouter = new Hono<WebhookVars>();
+
+  const importedRoutes = (
+    await Promise.all(routeFiles.map((file) => loadRoute(file, routesPath)))
+  ).flat();
+  const dbRoutes = await prisma.webhookRoutes.findMany();
+
+  const routeSecrets: { [key: string]: string } = dbRoutes.reduce(
+    (acc, route) => ({ ...acc, [route.path]: route.secret || '' }),
+    {},
+  );
+
+  importedRoutes.forEach((route) => {
+    route.secret = routeSecrets[route.path];
   });
-  const deletePromises = deletedRoutes.map((route) => {
-    logger.info(route, 'Deleting route');
-    return route.destroy();
+
+  const registeredRoutes = await Promise.all(
+    importedRoutes.map((route) => registerRoute(route, client, WebhookRouter)),
+  );
+
+  const dbPaths = dbRoutes.map((route) => route.path);
+  const definedPaths = registeredRoutes.map((route) => route.path);
+  const pathsToRemove = dbPaths.filter((path) => !definedPaths.includes(path));
+
+  logger.info(pathsToRemove, 'Removing Webhook routes from database');
+  await prisma.webhookRoutes.deleteMany({
+    where: {
+      path: {
+        in: pathsToRemove,
+      },
+    },
   });
-  await Promise.all(deletePromises);
+
+  const groupedRoutes = groupRoutes(registeredRoutes);
+  const baseUrl = config.bot.base_url;
+
+  const logInfo = Object.entries(groupedRoutes).flatMap(([path, methods]) =>
+    Object.entries(methods).map(([method, { isProtected, secret }]) => ({
+      method,
+      endpoint: `${baseUrl}/webhooks${path}?secret=${secret}&channelId=[channel_id]`,
+      isProtected,
+    })),
+  );
+
+  logger.info(logInfo, 'Registered routes');
+
+  return WebhookRouter;
 }
+
+const M_Secret = (isProtected: boolean, secret: string | undefined) => {
+  return factory.createMiddleware(async (c: Context, next) => {
+    if (isProtected) {
+      const requestSecret =
+        c.req.query('secret') || c.req.header('x-webhook-secret');
+      if (requestSecret !== secret) {
+        return c.json({ message: 'Unauthorized' }, 401);
+      }
+    }
+    await next();
+  });
+};
+
+const M_ValidateMethod = (method: string) => {
+  return factory.createMiddleware(async (c: Context, next) => {
+    if (!VALID_METHODS.includes(method as (typeof VALID_METHODS)[number])) {
+      return c.json({ message: 'Method not supported' }, 405);
+    }
+    if (c.req.method !== method.toUpperCase()) {
+      return c.json({ message: 'Method not allowed' }, 405);
+    }
+    await next();
+  });
+};
+
+const M_Discord = (client: Client) => {
+  return factory.createMiddleware(async (c: Context, next) => {
+    const channelId = c.req.query('channelId');
+    if (!channelId) {
+      return c.json({ error: 'Missing channelId query parameter' }, 400);
+    }
+
+    const channel = (await client.channels.fetch(channelId)) as TextChannel;
+    if (!channel) {
+      return c.json({ error: 'Invalid channel ID' }, 400);
+    }
+
+    c.set('channel', channel);
+    c.set('client', client);
+
+    await next();
+  });
+};
 
 function groupRoutes(routes: Route[]) {
   return routes.reduce(
@@ -167,66 +240,4 @@ function groupRoutes(routes: Route[]) {
       >
     >,
   );
-}
-
-export async function registerRoutes(client: Client) {
-  const routesPath = path.join(
-    path.resolve(),
-    runFromSrc ? 'src' : 'dist',
-    'webhooks',
-    'routes',
-  );
-  const routeFiles = fs.readdirSync(routesPath);
-
-  const importedRoutes = await Promise.all(
-    routeFiles.map((file) => importRoute(file, routesPath)),
-  );
-
-  const dbRoutes = await prisma.webhookRoutes.findMany();
-  const routeSecrets = dbRoutes.reduce(
-    (acc, route) => {
-      acc[route.path] = route.secret || '';
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
-  for (const route of importedRoutes.flat()) {
-    route.secret = routeSecrets[route.path];
-  }
-  const currentRoutes = importedRoutes.flat();
-
-  await deleteRoutes(dbRoutes, currentRoutes);
-
-  const routePromises = currentRoutes.map((route) =>
-    registerRoute(route, client, router),
-  );
-  const registeredRoutes = await Promise.all(routePromises);
-
-  router.all('*', (req, res) => {
-    const matchedRoute = router.stack.find(
-      (route) => route.route.path === req.path,
-    );
-    if (matchedRoute && !matchedRoute.route.methods[req.method.toLowerCase()]) {
-      res.status(405).send('Method Not Allowed');
-    } else {
-      res.status(404).send('Not Found');
-    }
-  });
-
-  const groupedRoutes = groupRoutes(registeredRoutes);
-
-  const baseUrl = config.bot.base_url;
-  const logInfo = Object.entries(groupedRoutes).map(([path, methods]) => {
-    return Object.entries(methods).map(([method, { isProtected, secret }]) => {
-      return {
-        method,
-        endpoint: `${baseUrl}/webhooks${path}?secret=${secret}&channelId=[channel_id]`,
-        isProtected,
-      };
-    });
-  });
-
-  logger.info(logInfo, 'Registered routes');
-
-  return router;
 }

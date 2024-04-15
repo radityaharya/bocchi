@@ -1,13 +1,12 @@
-import type { Request, Response } from 'express';
 import type { Client } from '@/lib/module-loader';
 import {
   Colors,
   EmbedBuilder,
-  type TextChannel,
   GuildScheduledEventPrivacyLevel,
   GuildScheduledEventEntityType,
 } from 'discord.js';
 import config from '@/config';
+import { WebhookContext } from '..';
 export const path = '/uptimekuma';
 export const isProtected = true;
 
@@ -151,30 +150,22 @@ async function createUptimeEvent(client: Client, body: UptimeKumaPayload) {
   });
 }
 export function post(client: Client) {
-  return async function (req: Request, res: Response) {
+  return async function (c: WebhookContext) {
     try {
-      const channelId = req?.query?.channelId as string;
-      if (!channelId) {
-        res.status(400).send('Missing channelId query parameter');
-        return;
-      }
+      const channel = c.var.channel;
 
-      const channel = (await client.channels.fetch(channelId)) as TextChannel;
-      if (!channel) {
-        res.status(404).send('Channel not found');
-        return;
-      }
+      const payload = (await c.req.json()) as UptimeKumaPayload;
 
       await channel.send({
-        embeds: [createUptimeKumaEmbed(req.body)],
+        embeds: [createUptimeKumaEmbed(payload)],
       });
 
-      await createUptimeEvent(client, req.body as UptimeKumaPayload);
+      await createUptimeEvent(client, payload);
 
-      res.send('OK');
+      return c.json({ success: true });
     } catch (error) {
       console.error(error);
-      res.status(500).send('An error occurred');
+      return c.json({ error: 'An error occurred' }, 500);
     }
   };
 }

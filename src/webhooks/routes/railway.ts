@@ -1,10 +1,11 @@
-import type { Request, Response } from 'express';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Client } from '@/lib/module-loader';
-import { Colors, EmbedBuilder, type TextChannel, User } from 'discord.js';
+import { Colors, EmbedBuilder, type TextChannel } from 'discord.js';
+import { WebhookContext } from '..';
 export const path = '/railway';
 export const isProtected = true;
 export function post(client: Client) {
-  return async function (req: Request, res: Response) {
+  return async function (c: WebhookContext) {
     try {
       const {
         type,
@@ -15,7 +16,7 @@ export function post(client: Client) {
         meta,
         service,
         status,
-      } = req.body;
+      } = await c.req.json();
 
       if (
         typeof type !== 'string' ||
@@ -24,8 +25,7 @@ export function post(client: Client) {
         typeof environment !== 'object' ||
         typeof deployment !== 'object'
       ) {
-        res.status(400).send('Invalid request body');
-        return;
+        return c.json({ error: 'Invalid request body' }, 400);
       }
       const embed = new EmbedBuilder()
         .setTitle('Railway Status')
@@ -63,23 +63,13 @@ export function post(client: Client) {
             value: status,
           },
         );
-      const channelId = req.query.channelId as string | undefined;
-      if (!channelId) {
-        res.status(400).send('Missing channelId');
-        return;
-      }
-
-      const channel = (await client.channels.fetch(channelId)) as TextChannel;
-      if (!channel) {
-        res.status(404).send('Channel not found');
-        return;
-      }
+      const channel = c.var.channel;
 
       channel.send({ embeds: [embed] });
-      res.send('OK');
+      return c.json({ success: true });
     } catch (error) {
       console.error(error);
-      res.status(500).send('An error occurred');
+      return c.json({ error: 'An error occurred' }, 500);
     }
   };
 }

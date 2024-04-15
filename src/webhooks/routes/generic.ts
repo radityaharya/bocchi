@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Context } from 'hono';
 import type { Client } from '@/lib/module-loader';
 import { Colors, EmbedBuilder, type TextChannel } from 'discord.js';
 import { file as tmpFile } from 'tmp-promise';
@@ -11,26 +11,21 @@ export const path = '/generic';
 export const isProtected = true;
 
 export function post(client: Client) {
-  return async function (req: Request, res: Response) {
+  return async function (c: Context) {
     try {
-      const channelId = req?.query?.channelId as string;
-      if (!channelId) {
-        res.status(400).send('Missing channelId query parameter');
-        return;
-      }
+      const channelId = c.req.query('channelId');
 
-      const channel = (await client.channels.fetch(channelId)) as TextChannel;
+      const channel = (await client.channels.fetch(channelId!)) as TextChannel;
       if (!channel) {
-        res.status(404).send('Channel not found');
-        return;
+        return c.json({ error: 'Invalid channel ID' }, 400);
       }
 
       const tmp = await tmpFile({ postfix: '.json' });
 
       const data = JSON.stringify(
         {
-          body: req.body,
-          headers: req.headers,
+          body: c.body,
+          headers: c.req.header,
         },
         null,
         2,
@@ -51,10 +46,10 @@ export function post(client: Client) {
 
       await tmp.cleanup();
 
-      res.send('OK');
+      return c.json({ success: true });
     } catch (error) {
       console.error(error);
-      res.status(500).send('An error occurred');
+      return c.json({ error: 'An error occurred' }, 500);
     }
   };
 }
