@@ -5,7 +5,6 @@ import glob from 'tiny-glob';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getFiles(dir: string): Promise<Array<any>> {
   try {
-    console.log(dir);
     const items = await glob(`${dir}/**/*.{js,ts}`, { absolute: true });
 
     if (items.length === 0) {
@@ -22,7 +21,7 @@ export async function getFiles(dir: string): Promise<Array<any>> {
 
     return files;
   } catch (err) {
-    return [];
+    throw new Error(String(err));
   }
 }
 
@@ -40,7 +39,7 @@ export async function getFilesFromPath(path: string): Promise<Array<any>> {
     for (const item of dirents) {
       const filePath = join(path, item.name);
 
-      if (item.isFile() && item.name.endsWith('.js')) {
+      if (item.isFile() && item.name.endsWith('.ts')) {
         items.push(filePath);
       } else if (item.isDirectory()) {
         items.push(...(await getFilesFromPath(filePath)));
@@ -52,7 +51,7 @@ export async function getFilesFromPath(path: string): Promise<Array<any>> {
     ).map((file) => file.default);
 
     return files;
-  } catch (err) {
-    return [];
+  } catch (err: unknown) {
+    throw new Error(String(err));
   }
 }

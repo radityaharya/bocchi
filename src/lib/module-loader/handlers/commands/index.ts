@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join, resolve } from 'path';
 
 import type Client from '@module-loader/structures/client';
 import Command from '@module-loader/structures/command';
@@ -91,9 +91,8 @@ export async function loadValidations(client: Client): Promise<void> {
 }
 
 async function loadInternalValidations(client: Client): Promise<void> {
-  const validations: Array<Validation> = await getFilesFromPath(
-    join(__dirname, 'validations'),
-  );
+  const dir = resolve(join(__dirname, '..', 'commands', 'validations'));
+  const validations: Array<Validation> = await getFilesFromPath(dir);
 
   if (!validations.length) {
     logger.info('No internal validations found.');
