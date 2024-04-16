@@ -1,6 +1,7 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
 import glob from 'tiny-glob';
+import logger from './logger';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getFiles(dir: string): Promise<Array<any>> {
@@ -21,7 +22,8 @@ export async function getFiles(dir: string): Promise<Array<any>> {
 
     return files;
   } catch (err) {
-    throw new Error(String(err));
+    logger.error(err);
+    return [];
   }
 }
 
@@ -52,6 +54,7 @@ export async function getFilesFromPath(path: string): Promise<Array<any>> {
 
     return files;
   } catch (err: unknown) {
-    throw new Error(String(err));
+    logger.error(err);
+    return [];
   }
 }
