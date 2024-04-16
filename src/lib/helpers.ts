@@ -7,16 +7,21 @@ import {
   type ThreadChannel,
 } from 'discord.js';
 import GPT3Tokenizer from 'gpt3-tokenizer';
-import type OpenAI from 'openai';
 
 import config from '@/config';
 
+export type MessageContext = {
+  role: string;
+  content: string;
+  id: string;
+};
+
 // TODO: inject multimodal context metadata here
 export function buildContext(
-  messages: Array<any>,
-  userMessage: string,
+  messages: Array<MessageContext>,
+  userMessage: Message,
   instruction?: string,
-): Array<any> {
+): Array<MessageContext> {
   let finalInstruction = instruction;
 
   if (!finalInstruction || finalInstruction === 'Default') {
@@ -29,15 +34,19 @@ export function buildContext(
     finalInstruction += '.';
   }
 
+  finalInstruction.replace('{{user}}', userMessage.author.username);
+
   const systemMessageContext = {
     role: 'system',
-    content: `${finalInstruction} The current date is ${format(new Date(), 'PPP')}.`,
+    content: `${finalInstruction} The current date is ${format(new Date(), 'PPP')}. The latest message is form ${userMessage.author.username}.`,
     name: 'system',
+    id: 'system',
   };
 
   const userMessageContext = {
     role: 'user',
-    content: userMessage,
+    content: userMessage.content,
+    id: userMessage.id,
   };
 
   if (messages.length === 0) {
@@ -53,14 +62,15 @@ export function buildContext(
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
     const content = message.content as string;
-    const encoded = tokenizer.encode(content);
 
+    const encoded = tokenizer.encode(content);
     tokenCount += encoded.text.length;
 
     if (tokenCount > maxTokens) {
       contexts.push({
         role: message.role,
         content: content.slice(0, tokenCount - maxTokens),
+        id: message.id,
       });
 
       break;
@@ -69,6 +79,7 @@ export function buildContext(
     contexts.push({
       role: message.role,
       content,
+      id: message.id,
     });
   }
 
@@ -77,10 +88,10 @@ export function buildContext(
 
 export function buildThreadContext(
   messages: Collection<string, Message>,
-  userMessage: string,
+  userMessage: Message,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   botId: string,
-): Array<OpenAI.Chat.ChatCompletionMessageParam> {
+): Array<MessageContext> {
   if (messages.size === 0) {
     return buildContext([], userMessage);
   }
@@ -108,20 +119,28 @@ export function buildThreadContext(
   }
 
   const context = [
-    { role: 'user', content: prompt, name: 'user' },
+    { role: 'user', content: prompt, name: 'user', id: initialMessage.id },
     ...messages
       .filter(
         (message) =>
           message.type === MessageType.Default &&
-          message.content &&
+          (message.content || message.attachments.size > 0) &&
           message.embeds.length === 0 &&
           (message.mentions.members?.size ?? 0) === 0,
       )
       .map((message) => {
+        if (message.attachments.size > 0) {
+          const attachment = message.attachments.first();
+          if (attachment) {
+            message.content = 'data:image';
+          }
+        }
+
         return {
           role: 'function',
           content: message.content,
           name: 'someName',
+          id: message.id,
         };
       })
       .reverse(),
@@ -132,9 +151,9 @@ export function buildThreadContext(
 
 export function buildDirectMessageContext(
   messages: Collection<string, Message>,
-  userMessage: string,
+  userMessage: Message,
   botId: string,
-): Array<OpenAI.Chat.ChatCompletionMessageParam> {
+): Array<MessageContext> {
   if (messages.size === 0) {
     return buildContext([], userMessage);
   }
@@ -143,14 +162,22 @@ export function buildDirectMessageContext(
     .filter(
       (message) =>
         message.type === MessageType.Default &&
-        message.content &&
+        (message.content || message.attachments.size > 0) &&
         message.embeds.length === 0 &&
         (message.mentions.members?.size ?? 0) === 0,
     )
     .map((message) => {
+      if (message.attachments.size > 0) {
+        const attachment = message.attachments.first();
+        if (attachment) {
+          message.content = 'data:image';
+        }
+      }
+
       return {
         role: message.author.id === botId ? 'assistant' : 'user',
         content: message.content,
+        id: message.id,
       };
     })
     .reverse();

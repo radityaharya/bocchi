@@ -38,6 +38,7 @@
     "gpt3-tokenizer": "^1.1.5",
     "hono": "^4.2.4",
     "langchain": "^0.1.33",
+    "langsmith": "^0.1.14",
     "lodash": "^4.17.21",
     "openai": "^4.33.1",
     "pino": "^8.20.0",

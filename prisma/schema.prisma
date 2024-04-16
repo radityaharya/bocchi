@@ -36,3 +36,9 @@ model RssPooler {
   lastCheckedString String?  // Nullable
   etag              String?  // Nullable
 }
+
+model AnalyzedAttachmentMetadata {
+  id          String   @id @default(uuid())
+  messageId   String
+  metadata    String
+}

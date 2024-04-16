@@ -67,9 +67,23 @@ async function handleThreadMessage(
 
       await channel.sendTyping();
 
+      if (message.attachments.size > 0) {
+        const attachment = message.attachments.first();
+        if (attachment) {
+          const file = await tempFile(attachment.url);
+          message.content = `data:${file.mimeType};base64,${file.base64}`;
+        }
+      }
+
+      const typingInterval = setInterval(() => {
+        channel.sendTyping();
+      }, 5000);
+
       const completion = await createChatCompletion(
-        buildThreadContext(messages, message.content, client.user.id),
+        buildThreadContext(messages, message, client.user.id),
       );
+
+      clearInterval(typingInterval);
 
       if (completion.status !== CompletionStatus.Ok) {
         await handleFailedRequest(
@@ -157,7 +171,7 @@ async function handleDirectMessage(
     }, 5000);
 
     const completion = await createChatCompletion(
-      buildDirectMessageContext(messages, message.content, client.user.id),
+      buildDirectMessageContext(messages, message, client.user.id),
     );
 
     clearInterval(typingInterval);
@@ -252,7 +266,7 @@ async function splitSend(completion: CompletionResponse, channel: DMChannel) {
     if (message.trim() !== '') {
       await channel.sendTyping();
       await new Promise((resolve) =>
-        setTimeout(resolve, (message.length / 20) * 1000),
+        setTimeout(resolve, (message.length / 30) * 1000),
       );
       await channel.send({
         content: message,

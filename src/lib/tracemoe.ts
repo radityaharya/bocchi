@@ -100,26 +100,189 @@ export async function getAnimeSauce({
   };
 }
 
-export async function getAnimeDetails(anilistId: number) {
+interface Title {
+  romaji: string;
+  english: string;
+  native: string;
+}
+
+interface Date {
+  year: number;
+  month: number;
+  day: number;
+}
+
+interface NextAiringEpisode {
+  airingAt: number;
+  timeUntilAiring: number;
+  episode: number;
+}
+
+interface Tag {
+  name: string;
+  description: string;
+  category: string;
+}
+
+interface Name {
+  full: string;
+  native: string;
+}
+
+interface CharacterNode {
+  gender: string;
+  description: string | null;
+  name: Name;
+}
+
+interface CharacterEdge {
+  node: CharacterNode;
+}
+
+interface StudioNode {
+  name: string;
+}
+
+interface StudioEdge {
+  node: StudioNode;
+}
+
+interface RelationNode {
+  id: number;
+  type: string;
+  title: Title;
+}
+
+interface RelationEdge {
+  node: RelationNode;
+}
+
+interface Media {
+  id: number;
+  idMal: number;
+  title: Title;
+  startDate: Date;
+  endDate: Date;
+  season: string;
+  seasonYear: number;
+  format: string;
+  status: string;
+  episodes: number;
+  duration: number;
+  chapters: number | null;
+  volumes: number | null;
+  genres: string[];
+  isAdult: boolean;
+  averageScore: number;
+  popularity: number;
+  favourites: number;
+  nextAiringEpisode: NextAiringEpisode;
+  description: string;
+  tags: Tag[];
+  characters: {
+    edges: CharacterEdge[];
+  };
+  studios: {
+    edges: StudioEdge[];
+  };
+  relations: {
+    edges: RelationEdge[];
+  };
+}
+
+interface Data {
+  Media: Media;
+}
+
+export interface AnilistResponse {
+  data: Data;
+}
+
+export async function getAnimeDetails(
+  anilistId: number,
+): Promise<AnilistResponse> {
   console.log('🚀 ~ getAnimeDetails ~ getAnimeDetails:', anilistId);
-  const anilistResponse = await axios.post(
+  const anilistResponse = (await axios.post(
     'https://graphql.anilist.co',
     {
       query: `
       query ($id: Int) {
         Media(id: $id, type: ANIME) {
+          id
+          idMal
           title {
             romaji
             english
             native
           }
-          siteUrl
+          startDate {
+            year
+            month
+            day
+          }
+          endDate {
+            year
+            month
+            day
+          }
+          season
+          seasonYear
+          format
+          status
           episodes
+          duration
+          chapters
+          volumes
           genres
+          isAdult
           averageScore
+          popularity
+          favourites
+          nextAiringEpisode {
+            airingAt
+            timeUntilAiring
+            episode
+          }
           description(asHtml: false)
+          tags {
+            name
+            description
+            category
+          }
+          characters {
+            edges {
+              node {
+                gender
+                description
+                name {
+                  full
+                  native 
+                }
+              }
+            }
+          }
+          studios {
+            edges {
+              node {
+                name
+              }
+            }
+          }
+          relations {
+            edges {
+              node {
+                id
+                type
+                title {
+                  english
+                  native
+                  romaji
+                }
+              }
+            }
+          }
         }
-      }
+    }
     `,
       variables: {
         id: anilistId,
@@ -131,7 +294,10 @@ export async function getAnimeDetails(anilistId: number) {
         'Accept-Encoding': 'gzip, deflate', //https://github.com/oven-sh/bun/issues/267#issuecomment-2044596837
       },
     },
-  );
+  )) as {
+    status: number;
+    data: AnilistResponse;
+  };
   if (anilistResponse.status !== 200)
     throw new Error('Failed to get anime details');
   return anilistResponse.data;

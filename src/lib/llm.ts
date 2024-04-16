@@ -11,6 +11,11 @@ import {
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { getAnimeDetails, getAnimeSauce, TraceMoeResultItem } from './tracemoe';
+import {
+  getAnalyzedAttachmentMetadataByMessageId,
+  setAttachmentMetadata,
+} from '@/utils/metadataLogger';
+import { MessageContext } from './helpers';
 
 const openai = new OpenAI({
   apiKey: config.openai.api_key,
@@ -72,13 +77,38 @@ async function traceAnimeContext(base64Image: string) {
         episode: match.episode,
         episodes: anilistResult.data.Media.episodes,
         genres: anilistResult.data.Media.genres,
-        score: anilistResult.data.Media.averageScore,
         description: anilistResult.data.Media.description,
-        video: match.video,
-        image: match.image,
+        characters: anilistResult.data.Media.characters.edges
+          .slice(0, 5)
+          .map((edge) => {
+            const { name, gender, description } = edge.node;
+            const truncatedDescription = description
+              ? `${description.substring(0, 47)}...`
+              : 'No description available';
+            return `${name.full} (Gender: ${gender}, Description: ${truncatedDescription})`;
+          })
+          .join(', ')
+          .replace(/, ([^,]*)$/, ' and $1'),
+        nextAiringDatetime: new Date(
+          anilistResult.data.Media.nextAiringEpisode?.airingAt * 1000,
+        ).toLocaleString(),
+        relations: anilistResult.data.Media.relations.edges
+          .map(
+            (edge) =>
+              edge.node.title.english ||
+              edge.node.title.romaji ||
+              edge.node.title.native,
+          )
+          .join(', '),
+        startDate: new Date(
+          anilistResult.data.Media.startDate.year,
+          anilistResult.data.Media.startDate.month - 1,
+          anilistResult.data.Media.startDate.day,
+        ).toLocaleDateString(),
+        score: anilistResult.data.Media.averageScore,
       };
 
-      additionalContext = `The image is from the anime titled "${anime.title}". This anime falls under the genres: ${anime.genres.join(', ')}. It has an average score of ${anime.score}. The specific scene in the image is from episode ${anime.episode} out of the total ${anime.episodes} episodes. Here is a brief description of the anime: "${anime.description}". Do note that the context provided is based on the image and may not be 100% accurate.`;
+      additionalContext = `The image is from the anime titled "${anime.title}". This anime falls under the genres: ${anime.genres.join(', ')}. It has an average score of ${anime.score}. The specific scene in the image is from episode ${anime.episode} out of the total ${anime.episodes} episodes. Here is a brief description of the anime: "${anime.description}". The main characters in this anime are ${anime.characters}. The next episode is scheduled to air on ${anime.nextAiringDatetime}. The anime is set to release on ${anime.startDate}. The anime has relations with the following anime or mangas: ${anime.relations}.`;
     }
   } catch (error) {
     console.error('Error tracing anime context:', error);
@@ -92,7 +122,6 @@ async function generateImageContext(file: string) {
   return additionalContext;
 }
 
-// TODO: Save context metadata in db and asign it to the history?
 async function identifyImage(file: string) {
   const additionalContext = await generateImageContext(file);
 
@@ -117,30 +146,38 @@ async function identifyImage(file: string) {
   return response;
 }
 export async function createChatCompletion(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  messages: Array<any>,
+  messages: Array<MessageContext>,
 ): Promise<CompletionResponse> {
   try {
-    const chatMessages = messages.map(async (message) => {
-      switch (message.role) {
-        case 'system':
-          return new SystemMessage(message.content);
-        case 'user': {
-          if (message.content.startsWith('data:image')) {
-            return new SystemMessage(
-              await identifyImage(message.content as string),
-            );
+    const chatMessages = await Promise.all(
+      messages.map(async (message) => {
+        switch (message.role) {
+          case 'system':
+            return new SystemMessage(message.content);
+          case 'user': {
+            if (message.content.startsWith('data:image')) {
+              const analyzedAttachment =
+                await getAnalyzedAttachmentMetadataByMessageId(message.id);
+              let metadata = analyzedAttachment
+                ? analyzedAttachment.metadata
+                : null;
+              if (!metadata) {
+                metadata = await identifyImage(message.content as string);
+                await setAttachmentMetadata(message.id, metadata);
+              }
+              return new SystemMessage(metadata);
+            }
+            return new HumanMessage(message.content);
           }
-          return new HumanMessage(message.content);
+          case 'assistant':
+            return new AIMessage(message.content);
+          default:
+            throw new Error(`Invalid message role: ${message.role}`);
         }
-        case 'assistant':
-          return new AIMessage(message.content);
-        default:
-          throw new Error(`Invalid message role: ${message.role}`);
-      }
-    });
+      }),
+    );
 
-    const completion = await chat.invoke(await Promise.all(chatMessages));
+    const completion = await chat.invoke(chatMessages);
     const message = completion.content;
     if (message) {
       return {
