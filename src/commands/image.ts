@@ -6,7 +6,7 @@ import {
 } from 'discord.js';
 
 import { createErrorEmbed } from '@/lib/embeds';
-import { CompletionStatus, createImage } from '@/lib/openai';
+import { CompletionStatus, createImage } from '@/lib/llm';
 
 export default new Command({
   data: new SlashCommandBuilder()

@@ -28,7 +28,7 @@ import {
   CompletionStatus,
   createChatCompletion,
   generateTitle,
-} from '@/lib/openai';
+} from '@/lib/llm';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();

@@ -27,9 +27,10 @@ import {
   type CompletionResponse,
   CompletionStatus,
   createChatCompletion,
-} from '@/lib/openai';
+} from '@/lib/llm';
 import { PrismaClient } from '@prisma/client';
 import logger from '@/utils/logger';
+import { tempFile } from '@/utils/tempFile';
 
 const prisma = new PrismaClient();
 
@@ -143,9 +144,23 @@ async function handleDirectMessage(
 
     await channel.sendTyping();
 
+    if (message.attachments.size > 0) {
+      const attachment = message.attachments.first();
+      if (attachment) {
+        const file = await tempFile(attachment.url);
+        message.content = `data:${file.mimeType};base64,${file.base64}`;
+      }
+    }
+
+    const typingInterval = setInterval(() => {
+      channel.sendTyping();
+    }, 5000);
+
     const completion = await createChatCompletion(
       buildDirectMessageContext(messages, message.content, client.user.id),
     );
+
+    clearInterval(typingInterval);
 
     if (completion.status !== CompletionStatus.Ok) {
       await handleFailedRequest(
@@ -182,7 +197,7 @@ export default new Event({
     if (
       message.author.id === client.user.id ||
       message.type !== MessageType.Default ||
-      !message.content ||
+      (!message.content && !message.attachments.size) ||
       !isEmpty(message.embeds) ||
       !isEmpty(message.mentions.members)
     ) {

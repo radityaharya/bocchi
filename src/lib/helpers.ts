@@ -11,6 +11,7 @@ import type OpenAI from 'openai';
 
 import config from '@/config';
 
+// TODO: inject multimodal context metadata here
 export function buildContext(
   messages: Array<any>,
   userMessage: string,

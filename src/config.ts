@@ -36,6 +36,9 @@ const config = {
     system_prompt:
       process.env.OPENAI_SYSTEM_PROMPT || 'You are a helpful assistant.',
   },
+  google_genai: {
+    api_key: process.env.GOOGLE_GENAI_API_KEY,
+  },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -23,8 +23,12 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@langchain/community": "^0.0.48",
+    "@langchain/google-genai": "^0.0.11",
+    "@langchain/openai": "^0.0.28",
     "@prisma/client": "5.12.1",
     "@types/body-parser": "^1.19.5",
+    "@types/mime-types": "^2.1.4",
     "axios": "^1.6.8",
     "croner": "^8.0.2",
     "date-fns": "^3.6.0",
@@ -33,12 +37,14 @@
     "form-data": "^4.0.0",
     "gpt3-tokenizer": "^1.1.5",
     "hono": "^4.2.4",
+    "langchain": "^0.1.33",
     "lodash": "^4.17.21",
     "openai": "^4.33.1",
     "pino": "^8.20.0",
     "prisma": "^5.12.1",
     "rate-limiter-flexible": "^5.0.0",
     "rss-parser": "^3.13.0",
+    "sharp": "^0.33.3",
     "tiny-glob": "^0.2.9",
     "tmp-promise": "^3.0.3"
   },

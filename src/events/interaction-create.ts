@@ -17,7 +17,7 @@ import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { createActionRow, createRegenerateButton } from '@/lib/buttons';
 import { createErrorEmbed } from '@/lib/embeds';
 import { buildThreadContext, isApiError } from '@/lib/helpers';
-import { CompletionStatus, createChatCompletion } from '@/lib/openai';
+import { CompletionStatus, createChatCompletion } from '@/lib/llm';
 
 const rateLimiter = new RateLimiterMemory({ points: 3, duration: 60 });
 

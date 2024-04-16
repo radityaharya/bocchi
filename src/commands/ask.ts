@@ -6,7 +6,7 @@ import {
 
 import { createErrorEmbed } from '@/lib/embeds';
 import { buildContext } from '@/lib/helpers';
-import { CompletionStatus, createChatCompletion } from '@/lib/openai';
+import { CompletionStatus, createChatCompletion } from '@/lib/llm';
 
 export default new Command({
   data: new SlashCommandBuilder()
