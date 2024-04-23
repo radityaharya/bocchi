@@ -36,7 +36,7 @@
     "dotenv": "^16.4.5",
     "form-data": "^4.0.0",
     "gpt3-tokenizer": "^1.1.5",
-    "hono": "^4.2.4",
+    "hono": "^4.2.7",
     "langchain": "^0.1.33",
     "langsmith": "^0.1.14",
     "lodash": "^4.17.21",
